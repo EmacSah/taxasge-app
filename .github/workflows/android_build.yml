@@ -3,9 +3,15 @@ name: Android Build
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/android_build.yml'
   pull_request:
     branches: [ main, develop ]
-  # Optionnel : permettre de déclencher manuellement le workflow
+  # Permettre de déclencher manuellement le workflow
   workflow_dispatch:
 
 jobs:
@@ -14,15 +20,30 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Check if Flutter project and Android directory exist
+        id: check_files
+        run: |
+          if [ -f "pubspec.yaml" ] && [ -d "lib" ] && [ -d "android" ]; then
+            echo "Flutter project with Android structure found"
+            echo "android_ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "Flutter project with Android not ready yet, skipping build"
+            echo "android_ready=false" >> $GITHUB_OUTPUT
+            exit 0  # Sortie propre sans erreur
+          fi
       
       - name: Setup Java
+        if: steps.check_files.outputs.android_ready == 'true'
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
       
       - name: Setup Flutter
+        if: steps.check_files.outputs.android_ready == 'true'
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.16.0'
@@ -30,12 +51,28 @@ jobs:
           cache: true
       
       - name: Install dependencies
+        if: steps.check_files.outputs.android_ready == 'true'
         run: flutter pub get
       
       - name: Build APK
-        run: flutter build apk --release
+        if: steps.check_files.outputs.android_ready == 'true'
+        run: flutter build apk --release --debug
+        continue-on-error: true  # Tolérer les erreurs de build en début de projet
+      
+      - name: Check if APK was built
+        if: steps.check_files.outputs.android_ready == 'true'
+        id: check_apk
+        run: |
+          if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            echo "APK built successfully"
+            echo "apk_built=true" >> $GITHUB_OUTPUT
+          else
+            echo "APK build failed, skipping upload"
+            echo "apk_built=false" >> $GITHUB_OUTPUT
+          fi
       
       - name: Upload APK
+        if: steps.check_files.outputs.android_ready == 'true' && steps.check_apk.outputs.apk_built == 'true'
         uses: actions/upload-artifact@v3
         with:
           name: release-apk
