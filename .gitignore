@@ -1,0 +1,72 @@
+# Fichiers et dossiers Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+build/
+ios/Pods/
+android/.gradle/
+lib/generated_plugin_registrant.dart
+
+# Fichiers Xcode liés à Flutter
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/GeneratedPluginRegistrant.*
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Generated.xcconfig
+**/ios/.symlinks/
+**/ios/Runner/GeneratedPluginRegistrant.h
+**/ios/Runner/GeneratedPluginRegistrant.m
+
+# Fichiers macOS liés à Flutter
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/Flutter-Debug.xcconfig
+**/macos/Flutter/Flutter-Release.xcconfig
+**/macos/Flutter/Flutter-Profile.xcconfig
+
+# Fichiers de configuration Android
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/local.properties
+**/android/gradlew
+**/android/gradlew.bat
+**/android/**/GeneratedPluginRegistrant.java
+
+# Fichiers IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Fichiers Visual Studio Code
+.vscode/
+.history/
+*.code-workspace
+
+# Fichiers Windows
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Fichiers macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Fichiers divers
+*.log
+*.pyc
+*.swp
+.atom/
+.buildlog/
+.history
+.svn/
+coverage/
