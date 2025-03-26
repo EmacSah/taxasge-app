@@ -1,0 +1,56 @@
+name: Documentation Build
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'lib/**/*.dart'
+      - '**.md'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'lib/**/*.dart'
+      - '**.md'
+  # Optionnel : permettre de déclencher manuellement le workflow
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+          channel: 'stable'
+          cache: true
+      
+      - name: Install dependencies
+        run: flutter pub get
+      
+      - name: Install dartdoc
+        run: flutter pub global activate dartdoc
+      
+      - name: Generate documentation
+        run: flutter pub global run dartdoc
+      
+      - name: Upload documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: doc/api/
+          retention-days: 7
+      
+      # Optionnel : déployer la documentation sur GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./doc/api
