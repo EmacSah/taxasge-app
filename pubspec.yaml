@@ -32,3 +32,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/data/taxes.json
+    - assets/data/taxes_schema.json
+    - assets/images/
+    - assets/icons/
