@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Taxes Schema with Prefixed IDs",
+  "description": "Schéma JSON des taxes structurées avec des identifiants préfixés par niveau (ministère, secteur, etc.).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "nombre", "sectores"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^M-\\d{3}$",
+        "description": "Identifiant unique du ministère (ex: M-001)"
+      },
+      "nombre": {
+        "type": "string",
+        "description": "Nom du ministère"
+      },
+      "sectores": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["id", "nombre", "categorias"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^S-\\d{3}$",
+              "description": "Identifiant unique du secteur (ex: S-001)"
+            },
+            "nombre": {
+              "type": "string",
+              "description": "Nom du secteur"
+            },
+            "categorias": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "nombre", "sub_categorias"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^C-\\d{3}$",
+                    "description": "Identifiant unique de la catégorie (ex: C-001)"
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "description": "Nom de la catégorie"
+                  },
+                  "sub_categorias": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["id", "conceptos"],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^SC-\\d{3}$",
+                          "description": "Identifiant unique de la sous-catégorie (ex: SC-001)"
+                        },
+                        "nombre": {
+                          "type": ["string", "null"],
+                          "description": "Nom de la sous-catégorie (ou null s'il n'existe pas)"
+                        },
+                        "conceptos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id", "nombre", "tasa_expedicion",
+                              "tasa_renovacion", "documentos_requeridos",
+                              "procedimiento", "palabras_clave"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^T-\\d{3}$",
+                                "description": "Identifiant unique du concept/taxe (ex: T-001)"
+                              },
+                              "nombre": {
+                                "type": "string",
+                                "description": "Nom du concept ou libellé de la taxe"
+                              },
+                              "tasa_expedicion": {
+                                "type": "string",
+                                "description": "Montant ou condition de la taxe d'expédition"
+                              },
+                              "tasa_renovacion": {
+                                "type": "string",
+                                "description": "Montant ou condition de la taxe de renouvellement"
+                              },
+                              "documentos_requeridos": {
+                                "type": ["string", "null"],
+                                "description": "Documents nécessaires pour cette taxe (peut être vide ou null)"
+                              },
+                              "procedimiento": {
+                                "type": ["string", "null"],
+                                "description": "Procédure à suivre pour cette taxe (peut être vide ou null)"
+                              },
+                              "palabras_clave": {
+                                "type": ["string", "array"],
+                                "description": "Liste de mots-clés liés à ce concept (chaîne séparée par virgules ou tableau)"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "M-001",
+      "nombre": "MINISTERIO DE ASUNTOS EXTERIORES Y COOPERACIÓN",
+      "sectores": [
+        {
+          "id": "S-001",
+          "nombre": "SECTOR DE ASUNTTOS EXTERIORES Y COOPERACIÓN",
+          "categorias": [
+            {
+              "id": "C-001",
+              "nombre": "SERVICIO CONSULAR",
+              "sub_categorias": [
+                {
+                  "id": "SC-001",
+                  "nombre": null,
+                  "conceptos": [
+                    {
+                      "id": "T-001",
+                      "nombre": "Legalización de Documentos",
+                      "tasa_expedicion": "2 000",
+                      "tasa_renovacion": "",
+                      "documentos_requeridos": "",
+                      "procedimiento": "",
+                      "palabras_clave": "asunttos, consular, cooperación, documentos, exteriores, legalización, sector, servicio"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
