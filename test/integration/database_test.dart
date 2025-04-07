@@ -1,7 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/database/database_service.dart';
+import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
+import 'package:sqflite/sqflite.dart';
 
 void main() {
+  // Initialiser SQLite FFI pour les tests
+  setUp(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+  
   test('Test de la base de données TaxasGE', () async {
     final dbService = DatabaseService();
     
@@ -9,13 +17,6 @@ void main() {
     print('Initialisation de la base de données...');
     await dbService.initialize(forceReset: true, seedData: true);
     print('Base de données initialisée avec succès.');
-    
-    // Vérifier les ministères
-    final ministerios = await dbService.ministerioDao.getAll();
-    print('\n=== Ministères (${ministerios.length}) ===');
-    for (final ministerio in ministerios) {
-      print('- ${ministerio.id}: ${ministerio.nombre}');
-    }
     
     if (ministerios.isNotEmpty) {
       // Vérifier les secteurs du premier ministère
