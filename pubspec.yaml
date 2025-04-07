@@ -41,3 +41,8 @@ flutter:
     - assets/data/taxes_schema.json
     - assets/images/
     - assets/icons/
+
+# Assets pour les tests
+flutter_test:
+  assets:
+    - test/test_assets/test_taxes.json
