@@ -9,7 +9,7 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   });
-  
+
   test('Test de la base de données TaxasGE', () async {
     final dbService = DatabaseService();
     
@@ -17,6 +17,13 @@ void main() {
     print('Initialisation de la base de données...');
     await dbService.initialize(forceReset: true, seedData: true);
     print('Base de données initialisée avec succès.');
+    
+    // Vérifier les ministères
+    final ministerios = await dbService.ministerioDao.getAll();
+    print('\n=== Ministères (${ministerios.length}) ===');
+    for (final ministerio in ministerios) {
+      print('- ${ministerio.id}: ${ministerio.nombre}');
+    }
     
     if (ministerios.isNotEmpty) {
       // Vérifier les secteurs du premier ministère
@@ -50,11 +57,58 @@ void main() {
               print('- ${concepto.id}: ${concepto.nombre}');
               print('  Expédition: ${concepto.tasaExpedicion}');
               print('  Renouvellement: ${concepto.tasaRenovacion}');
+              
+              // Vérifier les documents requis
+              final documents = await dbService.documentRequisDao.getByConceptoId(concepto.id);
+              if (documents.isNotEmpty) {
+                print('  Documents requis:');
+                for (final doc in documents) {
+                  print('    - ${doc.nombre}');
+                }
+              }
+              
+              // Vérifier les mots-clés
+              final motsCles = await dbService.motCleDao.getMotsClesByConceptoId(concepto.id);
+              if (motsCles.isNotEmpty) {
+                print('  Mots-clés: ${motsCles.join(", ")}');
+              }
+            }
+            
+            // Tester l'ajout et la suppression d'un favori
+            if (conceptos.isNotEmpty) {
+              final conceptoId = conceptos.first.id;
+              print('\n=== Test des favoris ===');
+              print('Ajout aux favoris: ${conceptoId}');
+              await dbService.favoriDao.addToFavorites(conceptoId);
+              
+              final isFavorite = await dbService.favoriDao.isFavorite(conceptoId);
+              print('Est un favori: $isFavorite');
+              expect(isFavorite, true);
+              
+              await dbService.favoriDao.deleteByConceptoId(conceptoId);
+              final isStillFavorite = await dbService.favoriDao.isFavorite(conceptoId);
+              print('Est toujours un favori après suppression: $isStillFavorite');
+              expect(isStillFavorite, false);
+            }
+            
+            // Tester la recherche avancée
+            print('\n=== Test de recherche avancée ===');
+            final searchResults = await dbService.searchConceptos(
+              searchTerm: conceptos.isNotEmpty ? conceptos.first.nombre.split(' ').first : 'test',
+            );
+            print('Résultats de recherche: ${searchResults.length}');
+            if (searchResults.isNotEmpty) {
+              print('Premier résultat: ${searchResults.first['nombre']}');
             }
           }
         }
       }
     }
+    
+    // Tester l'export JSON
+    print('\n=== Test d\'export JSON ===');
+    final exportPath = await dbService.exportToJson();
+    print('Données exportées vers: $exportPath');
     
     // Fermer la base de données
     await dbService.close();
