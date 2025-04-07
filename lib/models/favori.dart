@@ -1,45 +1,45 @@
-/// Modèle de données représentant un mot-clé.
+/// Modèle de données représentant un favori.
 ///
-/// Cette classe correspond à l'entité "mot_cle" dans la base de données
-/// et sert de modèle pour manipuler les données des mots-clés associés à une taxe.
-class MotCle {
-  /// Identifiant unique du mot-clé (auto-généré par la base de données)
+/// Cette classe correspond à l'entité "favori" dans la base de données
+/// et sert de modèle pour manipuler les données des favoris de l'utilisateur.
+class Favori {
+  /// Identifiant unique du favori (auto-généré par la base de données)
   final int id;
   
   /// Identifiant du concept associé
   final String conceptoId;
   
-  /// Mot-clé
-  final String motCle;
+  /// Date d'ajout aux favoris (format ISO 8601)
+  final String fechaAgregado;
   
   /// Constructeur
-  MotCle({
+  Favori({
     required this.id,
     required this.conceptoId,
-    required this.motCle,
+    required this.fechaAgregado,
   });
   
-  /// Crée une instance de MotCle à partir d'une Map.
+  /// Crée une instance de Favori à partir d'une Map.
   ///
   /// Cette méthode est utilisée pour convertir les données de la base de données
-  /// en objet MotCle.
-  factory MotCle.fromMap(Map<String, dynamic> map) {
-    return MotCle(
+  /// en objet Favori.
+  factory Favori.fromMap(Map<String, dynamic> map) {
+    return Favori(
       id: map['id'],
       conceptoId: map['concepto_id'],
-      motCle: map['mot_cle'],
+      fechaAgregado: map['fecha_agregado'],
     );
   }
   
-  /// Crée une instance de MotCle à partir d'un JSON.
+  /// Crée une instance de Favori à partir d'un JSON.
   ///
   /// Cette méthode est utilisée pour convertir les données JSON
-  /// en objet MotCle.
-  factory MotCle.fromJson(Map<String, dynamic> json) {
-    return MotCle(
+  /// en objet Favori.
+  factory Favori.fromJson(Map<String, dynamic> json) {
+    return Favori(
       id: json['id'] ?? 0,
       conceptoId: json['concepto_id'],
-      motCle: json['mot_cle'],
+      fechaAgregado: json['fecha_agregado'] ?? DateTime.now().toIso8601String(),
     );
   }
   
@@ -51,7 +51,7 @@ class MotCle {
     return {
       'id': id != 0 ? id : null, // Ne pas inclure l'ID s'il n'est pas défini
       'concepto_id': conceptoId,
-      'mot_cle': motCle,
+      'fecha_agregado': fechaAgregado,
     };
   }
   
@@ -66,33 +66,38 @@ class MotCle {
   ///
   /// Cette méthode est utile pour créer une version modifiée d'un objet
   /// sans altérer l'original.
-  MotCle copyWith({
+  Favori copyWith({
     int? id,
     String? conceptoId,
-    String? motCle,
+    String? fechaAgregado,
   }) {
-    return MotCle(
+    return Favori(
       id: id ?? this.id,
       conceptoId: conceptoId ?? this.conceptoId,
-      motCle: motCle ?? this.motCle,
+      fechaAgregado: fechaAgregado ?? this.fechaAgregado,
     );
+  }
+  
+  /// Obtient la date d'ajout sous forme d'objet DateTime.
+  DateTime get fechaAgregadoDateTime {
+    return DateTime.parse(fechaAgregado);
   }
   
   @override
   String toString() {
-    return 'MotCle{id: $id, conceptoId: $conceptoId, motCle: $motCle}';
+    return 'Favori{id: $id, conceptoId: $conceptoId, fechaAgregado: $fechaAgregado}';
   }
   
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
   
-    return other is MotCle &&
+    return other is Favori &&
       other.id == id &&
       other.conceptoId == conceptoId &&
-      other.motCle == motCle;
+      other.fechaAgregado == fechaAgregado;
   }
   
   @override
-  int get hashCode => id.hashCode ^ conceptoId.hashCode ^ motCle.hashCode;
+  int get hashCode => id.hashCode ^ conceptoId.hashCode ^ fechaAgregado.hashCode;
 }
