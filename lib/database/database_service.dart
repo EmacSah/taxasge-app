@@ -550,7 +550,7 @@ class DatabaseService {
       }
       
       // Écrire les données dans un fichier
-      final jsonString = JsonEncoder.withIndent('  ').convert(exportData['ministerios']);
+      final jsonString = const JsonEncoder.withIndent('  ').convert(exportData['ministerios']);
       
       late final String filePath;
       if (path != null) {
