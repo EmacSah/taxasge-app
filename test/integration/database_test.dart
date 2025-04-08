@@ -7,8 +7,9 @@ import 'dart:io';
 void main() {
   // Initialiser SQLite FFI pour les tests
   setUp(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+    //sqfliteFfiInit();
+    //databaseFactory = databaseFactoryFfi;
+	sqflite_common_ffi.databaseFactory = databaseFactoryFfi;
   });
 
   test('Test de la base de données TaxasGE avec fichier de test', () async {
