@@ -38,7 +38,7 @@ jobs:
         if: steps.check_files.outputs.flutter_ready == 'true'
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.20.0'
+          flutter-version: '3.19.6'
           channel: 'stable'
           cache: true
       
