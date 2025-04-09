@@ -1,0 +1,35 @@
+[
+  {
+    "id": "M-001",
+    "nombre": "MINISTÈRE TEST",
+    "sectores": [
+      {
+        "id": "S-001",
+        "nombre": "SECTEUR TEST",
+        "categorias": [
+          {
+            "id": "C-001",
+            "nombre": "CATÉGORIE TEST",
+            "sub_categorias": [
+              {
+                "id": "SC-001",
+                "nombre": "SOUS-CATÉGORIE TEST",
+                "conceptos": [
+                  {
+                    "id": "T-001",
+                    "nombre": "TAXE TEST",
+                    "tasa_expedicion": "1000",
+                    "tasa_renovacion": "500",
+                    "documentos_requeridos": "Document 1\nDocument 2",
+                    "procedimiento": "Procédure test",
+                    "palabras_clave": "test, taxe, exemple"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
