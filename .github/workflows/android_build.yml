@@ -73,7 +73,7 @@ jobs:
       
       - name: Upload APK
         if: steps.check_files.outputs.android_ready == 'true' && steps.check_apk.outputs.apk_built == 'true'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
