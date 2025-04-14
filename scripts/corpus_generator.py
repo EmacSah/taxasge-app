@@ -383,14 +383,196 @@ class CorpusGenerator:
         ]
         
         return conversation_starters
-    
-    def generate_corpus(self, output_file: str, augmentation_factor: int = 1) -> None:
+        
+    def translate_to_spanish(self, text):
         """
-        Génère le corpus complet et le sauvegarde dans un fichier JSON.
+        Traduit un texte du français vers l'espagnol (simplification basique).
+        Cette fonction applique des règles simples de traduction, 
+        ce qui est suffisant pour notre cas d'utilisation.
+        """
+        # Dictionnaire de base français -> espagnol
+        fr_to_es = {
+            # Mots courants
+            "bonjour": "hola",
+            "salut": "hola",
+            "merci": "gracias",
+            "au revoir": "adiós",
+            "comment": "cómo",
+            "combien": "cuánto",
+            "coûte": "cuesta",
+            "prix": "precio",
+            "documents": "documentos",
+            "requis": "requeridos",
+            "nécessaires": "necesarios",
+            "procédure": "procedimiento",
+            "obtenir": "obtener",
+            "ministère": "ministerio",
+            "responsable": "responsable",
+            "taxe": "tasa",
+            "taxes": "tasas",
+            "fiscales": "fiscales",
+            "s'il vous plaît": "por favor",
+            "information": "información",
+            "je voudrais": "quisiera",
+            "besoin": "necesito",
+            "savoir": "saber",
+            "cherche": "busco",
+            "quels": "cuáles",
+            "quelles": "cuáles",
+            "est": "es",
+            "sont": "son",
+            "pour": "para",
+            "de": "de",
+            "du": "del",
+            "la": "la",
+            "le": "el",
+            "les": "los",
+            "un": "un",
+            "une": "una",
+            "des": "de los",
+            "et": "y",
+            "ou": "o",
+            "qui": "qué",
+            "quel": "cuál",
+            "quelle": "cuál",
+            
+            # Termes spécifiques aux taxes
+            "passeport": "pasaporte",
+            "visa": "visado",
+            "carte d'identité": "documento de identidad",
+            "permis": "permiso",
+            "expédition": "expedición",
+            "renouvellement": "renovación",
+            "montant": "cantidad",
+            "paiement": "pago",
+            "payer": "pagar",
+        }
+        
+        # Traitement simple: remplacer les mots
+        words = text.lower().split()
+        translated_words = []
+        
+        for word in words:
+            # Nettoyage pour la comparaison
+            clean_word = word.strip(".,;:!?")
+            
+            # Chercher la traduction
+            if clean_word in fr_to_es:
+                # Conserver la ponctuation si présente
+                if word != clean_word:
+                    punctuation = word[len(clean_word):]
+                    translated_words.append(fr_to_es[clean_word] + punctuation)
+                else:
+                    translated_words.append(fr_to_es[clean_word])
+            else:
+                translated_words.append(word)
+        
+        # Reconstruction avec la première lettre en majuscule
+        translated_text = " ".join(translated_words)
+        if translated_text:
+            translated_text = translated_text[0].upper() + translated_text[1:]
+        
+        return translated_text
+
+    def translate_to_english(self, text):
+        """
+        Traduit un texte du français vers l'anglais (simplification basique).
+        Cette fonction applique des règles simples de traduction,
+        ce qui est suffisant pour notre cas d'utilisation.
+        """
+        # Dictionnaire de base français -> anglais
+        fr_to_en = {
+            # Mots courants
+            "bonjour": "hello",
+            "salut": "hi",
+            "merci": "thank you",
+            "au revoir": "goodbye",
+            "comment": "how",
+            "combien": "how much",
+            "coûte": "cost",
+            "prix": "price",
+            "documents": "documents",
+            "requis": "required",
+            "nécessaires": "necessary",
+            "procédure": "procedure",
+            "obtenir": "obtain",
+            "ministère": "ministry",
+            "responsable": "responsible",
+            "taxe": "tax",
+            "taxes": "taxes",
+            "fiscales": "fiscal",
+            "s'il vous plaît": "please",
+            "information": "information",
+            "je voudrais": "I would like",
+            "besoin": "need",
+            "savoir": "know",
+            "cherche": "looking for",
+            "quels": "which",
+            "quelles": "which",
+            "est": "is",
+            "sont": "are",
+            "pour": "for",
+            "de": "of",
+            "du": "of the",
+            "la": "the",
+            "le": "the",
+            "les": "the",
+            "un": "a",
+            "une": "a",
+            "des": "of the",
+            "et": "and",
+            "ou": "or",
+            "qui": "who",
+            "quel": "which",
+            "quelle": "which",
+            
+            # Termes spécifiques aux taxes
+            "passeport": "passport",
+            "visa": "visa",
+            "carte d'identité": "identity card",
+            "permis": "permit",
+            "expédition": "issuance",
+            "renouvellement": "renewal",
+            "montant": "amount",
+            "paiement": "payment",
+            "payer": "pay",
+        }
+        
+        # Traitement simple: remplacer les mots
+        words = text.lower().split()
+        translated_words = []
+        
+        for word in words:
+            # Nettoyage pour la comparaison
+            clean_word = word.strip(".,;:!?")
+            
+            # Chercher la traduction
+            if clean_word in fr_to_en:
+                # Conserver la ponctuation si présente
+                if word != clean_word:
+                    punctuation = word[len(clean_word):]
+                    translated_words.append(fr_to_en[clean_word] + punctuation)
+                else:
+                    translated_words.append(fr_to_en[clean_word])
+            else:
+                translated_words.append(word)
+        
+        # Reconstruction avec la première lettre en majuscule
+        translated_text = " ".join(translated_words)
+        if translated_text:
+            translated_text = translated_text[0].upper() + translated_text[1:]
+        
+        return translated_text
+
+    def generate_multilingual_corpus(self, output_file, augmentation_factor=1, include_spanish=True, include_english=True):
+        """
+        Génère le corpus complet multilingue et le sauvegarde dans un fichier JSON.
         
         Args:
             output_file: Chemin du fichier de sortie
             augmentation_factor: Facteur de multiplication pour l'augmentation des données
+            include_spanish: Inclure les traductions en espagnol
+            include_english: Inclure les traductions en anglais
         """
         # Générer différents types de questions-réponses
         general_qa = self.generate_general_questions()
@@ -436,6 +618,37 @@ class CorpusGenerator:
         # Ajouter les questions augmentées
         all_qa.extend(augmented_qa)
         
+        # Ajouter les traductions en espagnol
+        if include_spanish:
+            spanish_qa = []
+            for qa in all_qa:
+                if 'question' in qa and 'answer' in qa:
+                    spanish_qa.append({
+                        "question": self.translate_to_spanish(qa['question']),
+                        "answer": self.translate_to_spanish(qa['answer']),
+                        "language": "es"
+                    })
+            all_qa.extend(spanish_qa)
+            print(f"Ajout de {len(spanish_qa)} paires question-réponse en espagnol")
+        
+        # Ajouter les traductions en anglais
+        if include_english:
+            english_qa = []
+            for qa in all_qa:
+                if 'question' in qa and 'answer' in qa and not qa.get('language'):  # Ne traduire que les originaux français
+                    english_qa.append({
+                        "question": self.translate_to_english(qa['question']),
+                        "answer": self.translate_to_english(qa['answer']),
+                        "language": "en"
+                    })
+            all_qa.extend(english_qa)
+            print(f"Ajout de {len(english_qa)} paires question-réponse en anglais")
+        
+        # Marquer les originaux comme français
+        for qa in all_qa:
+            if 'question' in qa and 'answer' in qa and not qa.get('language'):
+                qa['language'] = 'fr'
+        
         # Mélanger les QA pour une meilleure distribution lors de l'entraînement
         random.shuffle(all_qa)
         
@@ -445,7 +658,8 @@ class CorpusGenerator:
                 "version": "1.0",
                 "created_at": "2025-04-14",
                 "size": len(all_qa),
-                "description": "Corpus d'entraînement pour le modèle NLP de l'application TaxasGE"
+                "languages": ["fr"] + (["es"] if include_spanish else []) + (["en"] if include_english else []),
+                "description": "Corpus d'entraînement multilingue pour le modèle NLP de l'application TaxasGE"
             },
             "data": all_qa
         }
@@ -455,7 +669,7 @@ class CorpusGenerator:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(corpus, f, ensure_ascii=False, indent=2)
         
-        print(f"Corpus généré avec succès: {len(all_qa)} paires question-réponse sauvegardées dans {output_file}")
+        print(f"Corpus multilingue généré avec succès: {len(all_qa)} paires question-réponse sauvegardées dans {output_file}")
 
 def main():
     # Parser d'arguments en ligne de commande
@@ -463,6 +677,9 @@ def main():
     parser.add_argument("--input", "-i", default="assets/data/taxes.json", help="Chemin vers le fichier JSON d'entrée")
     parser.add_argument("--output", "-o", default="assets/ml/training_corpus.json", help="Chemin vers le fichier JSON de sortie")
     parser.add_argument("--augmentation", "-a", type=int, default=2, help="Facteur d'augmentation des données")
+    parser.add_argument("--spanish", "-s", action="store_true", help="Inclure les traductions en espagnol")
+    parser.add_argument("--english", "-e", action="store_true", help="Inclure les traductions en anglais")
+    parser.add_argument("--all-languages", "-l", action="store_true", help="Inclure toutes les langues (espagnol et anglais)")
     
     args = parser.parse_args()
     
@@ -471,9 +688,15 @@ def main():
         print(f"Erreur: Le fichier d'entrée '{args.input}' n'existe pas.")
         return
     
+    # Déterminer les langues à inclure
+    include_spanish = args.spanish or args.all_languages
+    include_english = args.english or args.all_languages
+    
+    # Si aucune langue n'est spécifiée, utiliser toutes les langues par défaut
+    if not include_spanish and not include_english and not args.all_languages:
+        include_spanish = True
+        include_english = True
+    
     # Générer le corpus
     generator = CorpusGenerator(args.input)
-    generator.generate_corpus(args.output, args.augmentation)
-
-if __name__ == "__main__":
-    main()
+    generator.generate_multilingual_corpus(args.output, args.augmentation, include_spanish, include_english)
