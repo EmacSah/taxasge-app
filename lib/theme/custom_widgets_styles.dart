@@ -296,7 +296,7 @@ class CustomWidgetStyles {
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.paddingMedium),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.backgroundWhite,
         border: Border(
           bottom: BorderSide(color: AppTheme.dividerColor),
