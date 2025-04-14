@@ -24,7 +24,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
       
       - name: Check if Flutter project exists with Dart files
         id: check_files
@@ -42,7 +42,7 @@ jobs:
         if: steps.check_files.outputs.dart_docs_ready == 'true'
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.16.0'
+          flutter-version: '3.29.2'
           channel: 'stable'
           cache: true
       
@@ -73,7 +73,7 @@ jobs:
       
       - name: Upload documentation
         if: steps.check_files.outputs.dart_docs_ready == 'true' && steps.check_docs.outputs.docs_generated == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: documentation
           path: doc/api/
