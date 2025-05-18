@@ -42,6 +42,7 @@ flutter:
   assets:
     - assets/data/taxes.json
     - assets/data/taxes_schema.json
+    - assets/ml/taxasge_model.tflite
     - assets/images/
     - assets/icons/
 
