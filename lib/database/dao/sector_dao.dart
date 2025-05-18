@@ -3,7 +3,7 @@ import '../../models/sector.dart';
 import '../schema.dart';
 import 'dart:developer' as developer;
 
-/// Data Access Object pour la table des secteurs.
+/// Data Access Object pour la table des secteurs avec support multilingue.
 ///
 /// Cette classe fournit les méthodes pour effectuer les opérations CRUD
 /// (Create, Read, Update, Delete) sur la table des secteurs dans la base de données.
@@ -16,6 +16,12 @@ class SectorDao {
   
   /// Nom de la table
   static const String _tableName = DatabaseSchema.tableSectores;
+  
+  /// Langues supportées
+  final List<String> _supportedLanguages = DatabaseSchema.supportedLanguages;
+  
+  /// Langue par défaut
+  final String _defaultLanguage = DatabaseSchema.defaultLanguage;
   
   /// Insère un nouveau secteur dans la base de données.
   ///
@@ -84,12 +90,18 @@ class SectorDao {
   
   /// Récupère tous les secteurs.
   ///
-  /// Les secteurs sont optionnellement triés par le champ spécifié.
-  Future<List<Sector>> getAll({String? orderBy}) async {
+  /// Les secteurs sont optionnellement triés par le champ spécifié et dans la langue spécifiée.
+  Future<List<Sector>> getAll({String? orderBy, String? langCode}) async {
     try {
+      // Si une langue est spécifiée et aucun ordre n'est défini, trier par le nom dans cette langue
+      String? effectiveOrderBy = orderBy;
+      if (orderBy == null && langCode != null && _supportedLanguages.contains(langCode)) {
+        effectiveOrderBy = 'nombre_$langCode';
+      }
+      
       final List<Map<String, dynamic>> maps = await _db.query(
         _tableName,
-        orderBy: orderBy,
+        orderBy: effectiveOrderBy ?? 'nombre',
       );
       
       return maps.map((map) => Sector.fromMap(map)).toList();
@@ -101,14 +113,20 @@ class SectorDao {
   
   /// Récupère tous les secteurs pour un ministère spécifique.
   ///
-  /// Les secteurs sont optionnellement triés par le champ spécifié.
-  Future<List<Sector>> getByMinisterioId(String ministerioId, {String? orderBy}) async {
+  /// Les secteurs sont optionnellement triés par le champ spécifié et dans la langue spécifiée.
+  Future<List<Sector>> getByMinisterioId(String ministerioId, {String? orderBy, String? langCode}) async {
     try {
+      // Si une langue est spécifiée et aucun ordre n'est défini, trier par le nom dans cette langue
+      String? effectiveOrderBy = orderBy;
+      if (orderBy == null && langCode != null && _supportedLanguages.contains(langCode)) {
+        effectiveOrderBy = 'nombre_$langCode';
+      }
+      
       final List<Map<String, dynamic>> maps = await _db.query(
         _tableName,
         where: 'ministerio_id = ?',
         whereArgs: [ministerioId],
-        orderBy: orderBy,
+        orderBy: effectiveOrderBy ?? 'nombre',
       );
       
       return maps.map((map) => Sector.fromMap(map)).toList();
@@ -132,6 +150,27 @@ class SectorDao {
     } catch (e) {
       developer.log('Error updating sector: $e', name: 'SectorDao');
       throw Exception('Could not update sector: $e');
+    }
+  }
+  
+  /// Met à jour une traduction spécifique d'un secteur.
+  ///
+  /// Retourne le nombre de lignes affectées (0 si aucun secteur n'a été mis à jour).
+  Future<int> updateTranslation(String id, String langCode, String nombre) async {
+    try {
+      if (!_supportedLanguages.contains(langCode)) {
+        throw ArgumentError('Langue non supportée: $langCode');
+      }
+      
+      return await _db.update(
+        _tableName,
+        {'nombre_$langCode': nombre},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      developer.log('Error updating sector translation: $e', name: 'SectorDao');
+      throw Exception('Could not update sector translation: $e');
     }
   }
   
@@ -231,18 +270,112 @@ class SectorDao {
   /// Recherche des secteurs par nom.
   ///
   /// La recherche est insensible à la casse et utilise le pattern LIKE %term%.
-  Future<List<Sector>> searchByName(String searchTerm) async {
+  /// Il est possible de rechercher dans une langue spécifique.
+  Future<List<Sector>> searchByName(String searchTerm, {String? langCode}) async {
     try {
+      String whereClause;
+      List<Object> whereArgs = [];
+      
+      if (langCode != null && _supportedLanguages.contains(langCode)) {
+        // Recherche dans une langue spécifique
+        whereClause = 'nombre_$langCode LIKE ?';
+        whereArgs.add('%$searchTerm%');
+      } else {
+        // Recherche dans toutes les langues (par défaut)
+        List<String> conditions = [];
+        
+        // Ajouter le champ 'nombre' original pour compatibilité
+        conditions.add('nombre LIKE ?');
+        whereArgs.add('%$searchTerm%');
+        
+        // Ajouter les colonnes de traduction
+        for (final lang in _supportedLanguages) {
+          conditions.add('nombre_$lang LIKE ?');
+          whereArgs.add('%$searchTerm%');
+        }
+        
+        whereClause = conditions.join(' OR ');
+      }
+      
       final List<Map<String, dynamic>> maps = await _db.query(
         _tableName,
-        where: 'nombre LIKE ?',
-        whereArgs: ['%$searchTerm%'],
+        where: whereClause,
+        whereArgs: whereArgs,
       );
       
       return maps.map((map) => Sector.fromMap(map)).toList();
     } catch (e) {
       developer.log('Error searching sectors by name: $e', name: 'SectorDao');
       throw Exception('Could not search sectors: $e');
+    }
+  }
+  
+  /// Récupère les secteurs qui ont une traduction disponible dans la langue spécifiée.
+  ///
+  /// Cette méthode est utile pour identifier les secteurs qui n'ont pas encore été traduits.
+  Future<List<Sector>> getSectorsWithTranslation(String langCode) async {
+    try {
+      if (!_supportedLanguages.contains(langCode)) {
+        throw ArgumentError('Langue non supportée: $langCode');
+      }
+      
+      final List<Map<String, dynamic>> maps = await _db.query(
+        _tableName,
+        where: 'nombre_$langCode IS NOT NULL AND nombre_$langCode <> ""',
+      );
+      
+      return maps.map((map) => Sector.fromMap(map)).toList();
+    } catch (e) {
+      developer.log('Error getting sectors with translation: $e', name: 'SectorDao');
+      throw Exception('Could not get sectors with translation: $e');
+    }
+  }
+  
+  /// Récupère les secteurs qui n'ont pas de traduction disponible dans la langue spécifiée.
+  ///
+  /// Cette méthode est utile pour identifier les secteurs qui doivent être traduits.
+  Future<List<Sector>> getSectorsWithoutTranslation(String langCode) async {
+    try {
+      if (!_supportedLanguages.contains(langCode)) {
+        throw ArgumentError('Langue non supportée: $langCode');
+      }
+      
+      final List<Map<String, dynamic>> maps = await _db.query(
+        _tableName,
+        where: 'nombre_$langCode IS NULL OR nombre_$langCode = ""',
+      );
+      
+      return maps.map((map) => Sector.fromMap(map)).toList();
+    } catch (e) {
+      developer.log('Error getting sectors without translation: $e', name: 'SectorDao');
+      throw Exception('Could not get sectors without translation: $e');
+    }
+  }
+  
+  /// Récupère les langues disponibles pour un secteur spécifique
+  ///
+  /// Cette méthode retourne la liste des codes de langue pour lesquels 
+  /// le secteur possède des traductions.
+  Future<List<String>> getAvailableLanguagesForSector(String sectorId) async {
+    try {
+      final sector = await getById(sectorId);
+      if (sector == null) {
+        return [];
+      }
+      
+      final List<String> availableLanguages = [];
+      
+      for (final lang in _supportedLanguages) {
+        if (sector.nombreTraductions.containsKey(lang) && 
+            sector.nombreTraductions[lang]!.isNotEmpty) {
+          availableLanguages.add(lang);
+        }
+      }
+      
+      return availableLanguages;
+    } catch (e) {
+      developer.log('Error getting available languages for sector: $e', name: 'SectorDao');
+      throw Exception('Could not get available languages for sector: $e');
     }
   }
 }

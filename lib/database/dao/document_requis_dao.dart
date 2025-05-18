@@ -3,7 +3,7 @@ import '../../models/document_requis.dart';
 import '../schema.dart';
 import 'dart:developer' as developer;
 
-/// Data Access Object pour la table des documents requis.
+/// Data Access Object pour la table des documents requis avec support multilingue.
 ///
 /// Cette classe fournit les méthodes pour effectuer les opérations CRUD
 /// (Create, Read, Update, Delete) sur la table des documents requis dans la base de données.
@@ -16,6 +16,9 @@ class DocumentRequisDao {
   
   /// Nom de la table
   static const String _tableName = DatabaseSchema.tableDocumentosRequeridos;
+  
+  /// Langues supportées
+  final List<String> _supportedLanguages = DatabaseSchema.supportedLanguages;
   
   /// Insère un nouveau document requis dans la base de données.
   ///
@@ -101,13 +104,24 @@ class DocumentRequisDao {
   /// Récupère tous les documents requis pour un concept spécifique.
   ///
   /// Les documents sont optionnellement triés par le champ spécifié.
-  Future<List<DocumentRequis>> getByConceptoId(String conceptoId, {String? orderBy}) async {
+  Future<List<DocumentRequis>> getByConceptoId(String conceptoId, {String? orderBy, String? langCode}) async {
     try {
+      // Construire la clause ORDER BY en fonction de la langue spécifiée
+      String? effectiveOrderBy = orderBy;
+      if (orderBy == null && langCode != null) {
+        // Si une langue est spécifiée mais pas d'ordre, trier par le nom dans cette langue
+        if (_supportedLanguages.contains(langCode)) {
+          effectiveOrderBy = 'nombre_$langCode';
+        } else {
+          effectiveOrderBy = 'nombre';
+        }
+      }
+      
       final List<Map<String, dynamic>> maps = await _db.query(
         _tableName,
         where: 'concepto_id = ?',
         whereArgs: [conceptoId],
-        orderBy: orderBy ?? 'nombre',
+        orderBy: effectiveOrderBy ?? 'nombre',
       );
       
       return maps.map((map) => DocumentRequis.fromMap(map)).toList();
@@ -131,6 +145,42 @@ class DocumentRequisDao {
     } catch (e) {
       developer.log('Error updating document_requis: $e', name: 'DocumentRequisDao');
       throw Exception('Could not update document_requis: $e');
+    }
+  }
+  
+  /// Met à jour une traduction spécifique d'un document requis.
+  ///
+  /// Retourne le nombre de lignes affectées (0 si aucun document n'a été mis à jour).
+  Future<int> updateTranslation(int id, String langCode, {String? nombre, String? description}) async {
+    try {
+      if (!_supportedLanguages.contains(langCode)) {
+        throw ArgumentError('Langue non supportée: $langCode');
+      }
+      
+      final Map<String, Object?> values = {};
+      
+      // Ajouter uniquement les champs à mettre à jour
+      if (nombre != null) {
+        values['nombre_$langCode'] = nombre;
+      }
+      
+      if (description != null) {
+        values['description_$langCode'] = description;
+      }
+      
+      if (values.isEmpty) {
+        return 0; // Rien à mettre à jour
+      }
+      
+      return await _db.update(
+        _tableName,
+        values,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      developer.log('Error updating document_requis translation: $e', name: 'DocumentRequisDao');
+      throw Exception('Could not update document_requis translation: $e');
     }
   }
   
@@ -230,18 +280,85 @@ class DocumentRequisDao {
   /// Recherche des documents requis par nom.
   ///
   /// La recherche est insensible à la casse et utilise le pattern LIKE %term%.
-  Future<List<DocumentRequis>> searchByName(String searchTerm) async {
+  /// Supporte la recherche dans une langue spécifique ou dans toutes les langues.
+  Future<List<DocumentRequis>> searchByName(String searchTerm, {String? langCode}) async {
     try {
+      String whereClause;
+      List<Object> whereArgs = [];
+      
+      if (langCode != null && _supportedLanguages.contains(langCode)) {
+        // Recherche dans une langue spécifique
+        whereClause = 'nombre_$langCode LIKE ?';
+        whereArgs.add('%$searchTerm%');
+      } else {
+        // Recherche dans toutes les langues (par défaut)
+        List<String> conditions = [];
+        
+        // Ajouter le champ 'nombre' original pour compatibilité
+        conditions.add('nombre LIKE ?');
+        whereArgs.add('%$searchTerm%');
+        
+        // Ajouter les colonnes de traduction
+        for (final lang in _supportedLanguages) {
+          conditions.add('nombre_$lang LIKE ?');
+          whereArgs.add('%$searchTerm%');
+        }
+        
+        whereClause = conditions.join(' OR ');
+      }
+      
       final List<Map<String, dynamic>> maps = await _db.query(
         _tableName,
-        where: 'nombre LIKE ?',
-        whereArgs: ['%$searchTerm%'],
+        where: whereClause,
+        whereArgs: whereArgs,
       );
       
       return maps.map((map) => DocumentRequis.fromMap(map)).toList();
     } catch (e) {
       developer.log('Error searching document_requis by name: $e', name: 'DocumentRequisDao');
       throw Exception('Could not search document_requis: $e');
+    }
+  }
+  
+  /// Recherche des documents requis qui ont une traduction disponible dans la langue spécifiée.
+  ///
+  /// Cette méthode est utile pour identifier les documents qui n'ont pas encore été traduits.
+  Future<List<DocumentRequis>> getDocumentsWithTranslation(String langCode) async {
+    try {
+      if (!_supportedLanguages.contains(langCode)) {
+        throw ArgumentError('Langue non supportée: $langCode');
+      }
+      
+      final List<Map<String, dynamic>> maps = await _db.query(
+        _tableName,
+        where: 'nombre_$langCode IS NOT NULL AND nombre_$langCode <> ""',
+      );
+      
+      return maps.map((map) => DocumentRequis.fromMap(map)).toList();
+    } catch (e) {
+      developer.log('Error getting documents with translation: $e', name: 'DocumentRequisDao');
+      throw Exception('Could not get documents with translation: $e');
+    }
+  }
+  
+  /// Recherche des documents requis qui n'ont pas de traduction disponible dans la langue spécifiée.
+  ///
+  /// Cette méthode est utile pour identifier les documents qui doivent être traduits.
+  Future<List<DocumentRequis>> getDocumentsWithoutTranslation(String langCode) async {
+    try {
+      if (!_supportedLanguages.contains(langCode)) {
+        throw ArgumentError('Langue non supportée: $langCode');
+      }
+      
+      final List<Map<String, dynamic>> maps = await _db.query(
+        _tableName,
+        where: 'nombre_$langCode IS NULL OR nombre_$langCode = ""',
+      );
+      
+      return maps.map((map) => DocumentRequis.fromMap(map)).toList();
+    } catch (e) {
+      developer.log('Error getting documents without translation: $e', name: 'DocumentRequisDao');
+      throw Exception('Could not get documents without translation: $e');
     }
   }
 }

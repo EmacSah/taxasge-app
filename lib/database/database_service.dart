@@ -17,12 +17,15 @@ import 'dao/concepto_dao.dart';
 import 'dao/document_requis_dao.dart';
 import 'dao/mot_cle_dao.dart';
 import 'dao/favori_dao.dart';
+import 'dao/procedure_dao.dart';
 import '../models/ministerio.dart';
 import '../models/sector.dart';
 import '../models/categoria.dart';
 import '../models/sub_categoria.dart';
 import '../models/concepto.dart';
 import '../models/document_requis.dart';
+import '../models/mot_cle.dart';
+import '../services/localization_service.dart';
 
 /// Service principal de gestion de la base de données.
 ///
@@ -42,6 +45,7 @@ class DatabaseService {
   DocumentRequisDao? _documentRequisDao;
   MotCleDao? _motCleDao;
   FavoriDao? _favoriDao;
+  ProcedureDao? _procedureDao;
 
   /// Singleton
   static final DatabaseService _instance = DatabaseService._internal();
@@ -136,6 +140,17 @@ class DatabaseService {
     return _favoriDao!;
   }
 
+  /// Getter pour le DAO des procédures (nouveau)
+  ProcedureDao get procedureDao {
+    if (_procedureDao == null) {
+      if (_db == null) {
+        throw Exception('Database not initialized');
+      }
+      _procedureDao = ProcedureDao(_db!);
+    }
+    return _procedureDao!;
+  }
+
   /// Initialise la base de données.
   ///
   /// Cette méthode doit être appelée avant toute autre opération sur la base de données.
@@ -201,6 +216,7 @@ class DatabaseService {
     _documentRequisDao = DocumentRequisDao(_db!);
     _motCleDao = MotCleDao(_db!);
     _favoriDao = FavoriDao(_db!);
+    _procedureDao = ProcedureDao(_db!);
   }
 
   /// Réinitialise tous les DAOs.
@@ -213,6 +229,7 @@ class DatabaseService {
     _documentRequisDao = null;
     _motCleDao = null;
     _favoriDao = null;
+    _procedureDao = null;
   }
 
   /// Ferme la base de données.
@@ -234,129 +251,226 @@ class DatabaseService {
   /// et les importe dans la base de données.
   /// [testJsonString] : Pour les tests, permet de fournir directement des données JSON au lieu de les charger depuis les assets.
   Future<void> _importInitialData({String? testJsonString}) async {
-  try {
-    // Charger le fichier JSON depuis les assets ou utiliser les données de test
-    final String jsonString = testJsonString ?? await (() async {
-      try {
-        return await rootBundle.loadString('assets/data/taxes.json');
-      } catch (e) {
-        developer.log('Failed to load assets, using minimal test data', name: 'DatabaseService');
-        return '''[
-          {
-            "id": "M-001",
-            "nombre": "MINISTÈRE TEST",
-            "sectores": [
-              {
-                "id": "S-001",
-                "nombre": "SECTEUR TEST",
-                "categorias": [
-                  {
-                    "id": "C-001",
-                    "nombre": "CATÉGORIE TEST",
-                    "sub_categorias": [
-                      {
-                        "id": "SC-001",
-                        "nombre": "SOUS-CATÉGORIE TEST",
-                        "conceptos": [
-                          {
-                            "id": "T-001",
-                            "nombre": "TAXE TEST",
-                            "tasa_expedicion": "1000",
-                            "tasa_renovacion": "500",
-                            "documentos_requeridos": "Document 1\\nDocument 2",
-                            "procedimiento": "Procédure test",
-                            "palabras_clave": "test, taxe, exemple"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]''';
-      }
-    })();
-    
-    final List<dynamic> jsonData = json.decode(jsonString);
-    
-    // Le reste de la fonction reste identique...
-    // Importer les données dans une transaction pour assurer l'intégrité
-    await _db!.transaction((txn) async {
-      final ministerios = <Ministerio>[];
-      final sectores = <Sector>[];
-      final categorias = <Categoria>[];
-      final subCategorias = <SubCategoria>[];
-      final conceptos = <Concepto>[];
-      final documentosMap = <String, List<DocumentRequis>>{};
-      final motsClesMap = <String, List<String>>{};
-      
-      // Parcourir les ministères
-      for (final ministerioJson in jsonData) {
-        final ministerio = Ministerio.fromJson(ministerioJson);
-        ministerios.add(ministerio);
-        
-        // Parcourir les secteurs de chaque ministère
-        if (ministerioJson['sectores'] != null) {
-          for (final sectorJson in ministerioJson['sectores']) {
-            final sector = Sector.fromJson(sectorJson);
-            sector.ministerioId = ministerio.id;
-            sectores.add(sector);
-            
-            // Parcourir les catégories de chaque secteur
-            if (sectorJson['categorias'] != null) {
-              for (final categoriaJson in sectorJson['categorias']) {
-                final categoria = Categoria.fromJson(categoriaJson);
-                categoria.sectorId = sector.id;
-                categorias.add(categoria);
-                
-                // Parcourir les sous-catégories de chaque catégorie
-                if (categoriaJson['sub_categorias'] != null) {
-                  for (final subCategoriaJson in categoriaJson['sub_categorias']) {
-                    final subCategoria = SubCategoria.fromJson(subCategoriaJson);
-                    subCategoria.categoriaId = categoria.id;
-                    subCategorias.add(subCategoria);
-                    
-                    // Parcourir les concepts (taxes) de chaque sous-catégorie
-                    if (subCategoriaJson['conceptos'] != null) {
-                      for (final conceptoJson in subCategoriaJson['conceptos']) {
-                        final concepto = Concepto.fromJson(conceptoJson);
-                        concepto.subCategoriaId = subCategoria.id;
-                        conceptos.add(concepto);
-                        
-                        // Traiter les documents requis (s'il y en a)
-                        if (conceptoJson['documentos_requeridos'] != null && 
-                            conceptoJson['documentos_requeridos'].toString().trim().isNotEmpty) {
-                          final docsString = conceptoJson['documentos_requeridos'].toString();
-                          final docsList = docsString.split('\n')
-                              .where((doc) => doc.trim().isNotEmpty)
-                              .map((doc) => doc.trim())
-                              .toList();
-                          
-                          final documents = <DocumentRequis>[];
-                          for (final docName in docsList) {
-                            documents.add(DocumentRequis(
-                              id: 0, // Auto-généré
-                              conceptoId: concepto.id,
-                              nombre: docName,
-                              description: null,
-                            ));
-                          }
-                          
-                          documentosMap[concepto.id] = documents;
+    try {
+      // Charger le fichier JSON depuis les assets ou utiliser les données de test
+      final String jsonString = testJsonString ??
+          await (() async {
+            try {
+              return await rootBundle.loadString('assets/data/taxes.json');
+            } catch (e) {
+              developer.log('Failed to load assets, using minimal test data',
+                  name: 'DatabaseService');
+              return '''[
+            {
+              "id": "M-001",
+              "nombre": {
+                "es": "MINISTÈRE TEST",
+                "fr": "MINISTÈRE TEST",
+                "en": "TEST MINISTRY"
+              },
+              "sectores": [
+                {
+                  "id": "S-001",
+                  "nombre": {
+                    "es": "SECTEUR TEST",
+                    "fr": "SECTEUR TEST",
+                    "en": "TEST SECTOR"
+                  },
+                  "categorias": [
+                    {
+                      "id": "C-001",
+                      "nombre": {
+                        "es": "CATÉGORIE TEST",
+                        "fr": "CATÉGORIE TEST",
+                        "en": "TEST CATEGORY"
+                      },
+                      "sub_categorias": [
+                        {
+                          "id": "SC-001",
+                          "nombre": {
+                            "es": "SOUS-CATÉGORIE TEST",
+                            "fr": "SOUS-CATÉGORIE TEST",
+                            "en": "TEST SUBCATEGORY"
+                          },
+                          "conceptos": [
+                            {
+                              "id": "T-001",
+                              "nombre": {
+                                "es": "TAXE TEST",
+                                "fr": "TAXE TEST",
+                                "en": "TEST TAX"
+                              },
+                              "tasa_expedicion": "1000",
+                              "tasa_renovacion": "500",
+                              "documentos_requeridos": {
+                                "es": "Document 1\\nDocument 2",
+                                "fr": "Document 1\\nDocument 2",
+                                "en": "Document 1\\nDocument 2"
+                              },
+                              "procedimiento": {
+                                "es": "Procédure test",
+                                "fr": "Procédure test",
+                                "en": "Test procedure"
+                              },
+                              "palabras_clave": {
+                                "es": "test, taxe, exemple",
+                                "fr": "test, taxe, exemple",
+                                "en": "test, tax, example"
+                              }
+                            }
+                          ]
                         }
-                        
-                        // Traiter les mots-clés (s'il y en a)
-                        if (conceptoJson['palabras_clave'] != null && 
-                            conceptoJson['palabras_clave'].toString().trim().isNotEmpty) {
-                          final keywordsString = conceptoJson['palabras_clave'].toString();
-                          final keywordsList = keywordsString.split(',')
-                              .map((word) => word.trim().toLowerCase())
-                              .where((word) => word.isNotEmpty)
-                              .toList();
-                          
-                          motsClesMap[concepto.id] = keywordsList;
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]''';
+            }
+          })();
+
+      final List<dynamic> jsonData = json.decode(jsonString);
+
+      // Importer les données dans une transaction pour assurer l'intégrité
+      await _db!.transaction((txn) async {
+        final ministerios = <Ministerio>[];
+        final sectores = <Sector>[];
+        final categorias = <Categoria>[];
+        final subCategorias = <SubCategoria>[];
+        final conceptos = <Concepto>[];
+        final documentosMap = <String, List<DocumentRequis>>{};
+        final motsClesMap = <String, MotsClesMultilingues>{};
+
+        // Parcourir les ministères
+        for (final ministerioJson in jsonData) {
+          final ministerio = Ministerio.fromJson(ministerioJson);
+          ministerios.add(ministerio);
+
+          // Parcourir les secteurs de chaque ministère
+          if (ministerioJson['sectores'] != null) {
+            for (final sectorJson in ministerioJson['sectores']) {
+              final sector = Sector.fromJson(sectorJson);
+              sector.ministerioId = ministerio.id;
+              sectores.add(sector);
+
+              // Parcourir les catégories de chaque secteur
+              if (sectorJson['categorias'] != null) {
+                for (final categoriaJson in sectorJson['categorias']) {
+                  final categoria = Categoria.fromJson(categoriaJson);
+                  categoria.sectorId = sector.id;
+                  categorias.add(categoria);
+
+                  // Parcourir les sous-catégories de chaque catégorie
+                  if (categoriaJson['sub_categorias'] != null) {
+                    for (final subCategoriaJson
+                        in categoriaJson['sub_categorias']) {
+                      final subCategoria =
+                          SubCategoria.fromJson(subCategoriaJson);
+                      subCategoria.categoriaId = categoria.id;
+                      subCategorias.add(subCategoria);
+
+                      // Parcourir les concepts (taxes) de chaque sous-catégorie
+                      if (subCategoriaJson['conceptos'] != null) {
+                        for (final conceptoJson
+                            in subCategoriaJson['conceptos']) {
+                          final concepto = Concepto.fromJson(conceptoJson);
+                          concepto.subCategoriaId = subCategoria.id;
+                          conceptos.add(concepto);
+
+                          // Traiter les documents requis (s'il y en a)
+                          if (conceptoJson['documentos_requeridos'] != null) {
+                            List<DocumentRequis> documents = [];
+
+                            // Support pour le format ancien (chaîne simple) et nouveau (objet traductions)
+                            if (conceptoJson['documentos_requeridos']
+                                is String) {
+                              // Ancien format
+                              final docsString =
+                                  conceptoJson['documentos_requeridos']
+                                      .toString();
+                              final docsList = docsString
+                                  .split('\n')
+                                  .where((doc) => doc.trim().isNotEmpty)
+                                  .map((doc) => doc.trim())
+                                  .toList();
+
+                              for (final docName in docsList) {
+                                documents.add(DocumentRequis(
+                                  id: 0, // Auto-généré
+                                  conceptoId: concepto.id,
+                                  nombreTraductions: {'es': docName},
+                                  descriptionTraductions: null,
+                                ));
+                              }
+                            } else if (conceptoJson['documentos_requeridos']
+                                is Map) {
+                              // Nouveau format multilingue
+                              // Traiter chaque langue séparément
+                              final Map<String, dynamic> docsMap =
+                                  conceptoJson['documentos_requeridos'];
+
+                              // Obtenir la liste des documents pour l'espagnol (langue par défaut)
+                              String? docsEs = docsMap['es']?.toString();
+
+                              if (docsEs != null && docsEs.isNotEmpty) {
+                                final List<String> docsList = docsEs
+                                    .split('\n')
+                                    .where((doc) => doc.trim().isNotEmpty)
+                                    .map((doc) => doc.trim())
+                                    .toList();
+
+                                // Créer un DocumentRequis pour chaque ligne
+                                for (int i = 0; i < docsList.length; i++) {
+                                  Map<String, String> nombreTraductions = {
+                                    'es': docsList[i]
+                                  };
+
+                                  // Ajouter les autres traductions si disponibles
+                                  for (String lang
+                                      in DatabaseSchema.supportedLanguages) {
+                                    if (lang != 'es' &&
+                                        docsMap.containsKey(lang)) {
+                                      final List<String> localizedDocsList =
+                                          docsMap[lang]
+                                              .toString()
+                                              .split('\n')
+                                              .where((doc) =>
+                                                  doc.trim().isNotEmpty)
+                                              .map((doc) => doc.trim())
+                                              .toList();
+
+                                      if (i < localizedDocsList.length) {
+                                        nombreTraductions[lang] =
+                                            localizedDocsList[i];
+                                      }
+                                    }
+                                  }
+
+                                  documents.add(DocumentRequis(
+                                    id: 0, // Auto-généré
+                                    conceptoId: concepto.id,
+                                    nombreTraductions: nombreTraductions,
+                                    descriptionTraductions: null,
+                                  ));
+                                }
+                              }
+                            }
+
+                            if (documents.isNotEmpty) {
+                              documentosMap[concepto.id] = documents;
+                            }
+                          }
+
+                          // Traiter les mots-clés (s'il y en a)
+                          if (conceptoJson['palabras_clave'] != null) {
+                            // Créer un objet MotsClesMultilingues
+                            final motsClesMulti =
+                                Concepto.createMotsClesMultilingues(concepto.id,
+                                    conceptoJson['palabras_clave']);
+
+                            motsClesMap[concepto.id] = motsClesMulti;
+                          }
                         }
                       }
                     }
@@ -366,92 +480,104 @@ class DatabaseService {
             }
           }
         }
-      }
-      
-      // Insérer les données dans la base de données
-      developer.log('Inserting ${ministerios.length} ministerios...', name: 'DatabaseService');
-      for (final ministerio in ministerios) {
-        await txn.insert(
-          DatabaseSchema.tableMinisterios,
-          ministerio.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      
-      developer.log('Inserting ${sectores.length} sectores...', name: 'DatabaseService');
-      for (final sector in sectores) {
-        await txn.insert(
-          DatabaseSchema.tableSectores,
-          sector.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      
-      developer.log('Inserting ${categorias.length} categorias...', name: 'DatabaseService');
-      for (final categoria in categorias) {
-        await txn.insert(
-          DatabaseSchema.tableCategorias,
-          categoria.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      
-      developer.log('Inserting ${subCategorias.length} subCategorias...', name: 'DatabaseService');
-      for (final subCategoria in subCategorias) {
-        await txn.insert(
-          DatabaseSchema.tableSubCategorias,
-          subCategoria.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      
-      developer.log('Inserting ${conceptos.length} conceptos...', name: 'DatabaseService');
-      for (final concepto in conceptos) {
-        await txn.insert(
-          DatabaseSchema.tableConceptos,
-          concepto.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      
-      // Insérer les documents requis
-      for (final entry in documentosMap.entries) {
-        final conceptoId = entry.key;
-        final documents = entry.value;
-        
-        for (final doc in documents) {
+
+        // Insérer les données dans la base de données
+        developer.log('Inserting ${ministerios.length} ministerios...',
+            name: 'DatabaseService');
+        for (final ministerio in ministerios) {
           await txn.insert(
-            DatabaseSchema.tableDocumentosRequeridos,
-            doc.toMap(),
+            DatabaseSchema.tableMinisterios,
+            ministerio.toMap(),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
-      }
-      
-      // Insérer les mots-clés
-      for (final entry in motsClesMap.entries) {
-        final conceptoId = entry.key;
-        final keywords = entry.value;
-        
-        for (final keyword in keywords) {
+
+        developer.log('Inserting ${sectores.length} sectores...',
+            name: 'DatabaseService');
+        for (final sector in sectores) {
           await txn.insert(
-            DatabaseSchema.tableMotsCles,
-            {
-              'concepto_id': conceptoId,
-              'mot_cle': keyword,
-            },
+            DatabaseSchema.tableSectores,
+            sector.toMap(),
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
-      }
-    });
-    
-    developer.log('Initial data imported successfully', name: 'DatabaseService');
-  } catch (e) {
-    developer.log('Error importing initial data: $e', name: 'DatabaseService');
-    throw Exception('Could not import initial data: $e');
+
+        developer.log('Inserting ${categorias.length} categorias...',
+            name: 'DatabaseService');
+        for (final categoria in categorias) {
+          await txn.insert(
+            DatabaseSchema.tableCategorias,
+            categoria.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+
+        developer.log('Inserting ${subCategorias.length} subCategorias...',
+            name: 'DatabaseService');
+        for (final subCategoria in subCategorias) {
+          await txn.insert(
+            DatabaseSchema.tableSubCategorias,
+            subCategoria.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+
+        developer.log('Inserting ${conceptos.length} conceptos...',
+            name: 'DatabaseService');
+        for (final concepto in conceptos) {
+          await txn.insert(
+            DatabaseSchema.tableConceptos,
+            concepto.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+
+        // Insérer les documents requis
+        int docCount = 0;
+        for (final entry in documentosMap.entries) {
+          final conceptoId = entry.key;
+          final documents = entry.value;
+
+          for (final doc in documents) {
+            await txn.insert(
+              DatabaseSchema.tableDocumentosRequeridos,
+              doc.toMap(),
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            docCount++;
+          }
+        }
+        developer.log('Inserted $docCount documents requis...',
+            name: 'DatabaseService');
+
+        // Insérer les mots-clés
+        int motCleCount = 0;
+        for (final entry in motsClesMap.entries) {
+          final conceptoId = entry.key;
+          final motsClesMulti = entry.value;
+
+          final motsCles = motsClesMulti.toMotsCles();
+          for (final motCle in motsCles) {
+            await txn.insert(
+              DatabaseSchema.tableMotsCles,
+              motCle.toMap(),
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            motCleCount++;
+          }
+        }
+        developer.log('Inserted $motCleCount mots clés...',
+            name: 'DatabaseService');
+      });
+
+      developer.log('Initial data imported successfully',
+          name: 'DatabaseService');
+    } catch (e) {
+      developer.log('Error importing initial data: $e',
+          name: 'DatabaseService');
+      throw Exception('Could not import initial data: $e');
+    }
   }
-}
 
   /// Efface toutes les données de la base de données.
   ///
@@ -469,12 +595,14 @@ class DatabaseService {
         await txn.delete(DatabaseSchema.tableFavoritos);
         await txn.delete(DatabaseSchema.tableMotsCles);
         await txn.delete(DatabaseSchema.tableDocumentosRequeridos);
+        await txn.delete(DatabaseSchema.tableProcedimientos);
         await txn.delete(DatabaseSchema.tableConceptos);
         await txn.delete(DatabaseSchema.tableSubCategorias);
         await txn.delete(DatabaseSchema.tableCategorias);
         await txn.delete(DatabaseSchema.tableSectores);
         await txn.delete(DatabaseSchema.tableMinisterios);
         await txn.delete(DatabaseSchema.tableSyncRecords);
+        await txn.delete(DatabaseSchema.tableLanguagePrefs);
       });
 
       developer.log('All data cleared from database', name: 'DatabaseService');
@@ -489,7 +617,8 @@ class DatabaseService {
   /// Cette méthode est utile pour sauvegarder les données ou pour les déboguer.
   /// [path] : Le chemin du fichier où exporter les données. Si null, un fichier
   /// sera créé dans le répertoire temporaire de l'application.
-  Future<String> exportToJson({String? path}) async {
+  /// [langCode] : Code de langue à utiliser pour l'exportation (pour les champs non multilingues).
+  Future<String> exportToJson({String? path, String? langCode}) async {
     try {
       if (_db == null) {
         throw Exception('Database not initialized');
@@ -497,50 +626,98 @@ class DatabaseService {
 
       developer.log('Exporting database to JSON...', name: 'DatabaseService');
 
+      // Utiliser la langue spécifiée ou la langue par défaut du système
+      final String effectiveLangCode =
+          langCode ?? LocalizationService.instance.currentLanguage;
+
       // Récupérer toutes les données
       final ministerios = await ministerioDao.getAll(orderBy: 'id');
       final Map<String, dynamic> exportData = {'ministerios': []};
 
       for (final ministerio in ministerios) {
-        final ministerioMap = ministerio.toMap();
+        final ministerioMap = ministerio.toJson();
         final sectores =
             await sectorDao.getByMinisterioId(ministerio.id, orderBy: 'id');
         ministerioMap['sectores'] = [];
 
         for (final sector in sectores) {
-          final sectorMap = sector.toMap();
+          final sectorMap = sector.toJson();
           final categorias =
               await categoriaDao.getBySectorId(sector.id, orderBy: 'id');
           sectorMap['categorias'] = [];
 
           for (final categoria in categorias) {
-            final categoriaMap = categoria.toMap();
+            final categoriaMap = categoria.toJson();
             final subCategorias = await subCategoriaDao
                 .getByCategoriaId(categoria.id, orderBy: 'id');
             categoriaMap['sub_categorias'] = [];
 
             for (final subCategoria in subCategorias) {
-              final subCategoriaMap = subCategoria.toMap();
+              final subCategoriaMap = subCategoria.toJson();
               final conceptos = await conceptoDao
                   .getBySubCategoriaId(subCategoria.id, orderBy: 'id');
               subCategoriaMap['conceptos'] = [];
 
               for (final concepto in conceptos) {
-                final conceptoMap = concepto.toMap();
+                final conceptoMap = concepto.toJson();
 
                 // Récupérer les documents requis
                 final documents =
                     await documentRequisDao.getByConceptoId(concepto.id);
                 if (documents.isNotEmpty) {
-                  conceptoMap['documentos_requeridos'] =
-                      documents.map((doc) => doc.nombre).join('\n');
+                  // Format multilingue pour les documents
+                  Map<String, String> docsTraductions = {};
+
+                  // Regrouper les documents par langue
+                  for (String lang in DatabaseSchema.supportedLanguages) {
+                    List<String> docsInLang = [];
+
+                    for (final doc in documents) {
+                      String docName = doc.getNombre(lang);
+                      if (docName.isNotEmpty) {
+                        docsInLang.add(docName);
+                      }
+                    }
+
+                    if (docsInLang.isNotEmpty) {
+                      docsTraductions[lang] = docsInLang.join('\n');
+                    }
+                  }
+
+                  conceptoMap['documentos_requeridos'] = docsTraductions;
                 }
 
                 // Récupérer les mots-clés
-                final keywords =
-                    await motCleDao.getMotsClesByConceptoId(concepto.id);
-                if (keywords.isNotEmpty) {
-                  conceptoMap['palabras_clave'] = keywords.join(', ');
+                final motsClesMulti = await motCleDao
+                    .getMotsClesMultilinguesByConceptoId(concepto.id);
+                if (motsClesMulti.motsClesByLang.isNotEmpty) {
+                  conceptoMap['palabras_clave'] = motsClesMulti.toJson();
+                }
+
+                // Récupérer les procédures
+                final procedures = await procedureDao
+                    .getByConceptoId(concepto.id, orderBy: 'orden');
+                if (procedures.isNotEmpty) {
+                  // Format multilingue pour les procédures
+                  Map<String, List<String>> procTraductions = {};
+
+                  // Regrouper les procédures par langue
+                  for (String lang in DatabaseSchema.supportedLanguages) {
+                    List<String> procInLang = [];
+
+                    for (final proc in procedures) {
+                      String procDesc = proc.getDescription(lang);
+                      if (procDesc.isNotEmpty) {
+                        procInLang.add(procDesc);
+                      }
+                    }
+
+                    if (procInLang.isNotEmpty) {
+                      procTraductions[lang] = procInLang;
+                    }
+                  }
+
+                  conceptoMap['procedimientos'] = procTraductions;
                 }
 
                 subCategoriaMap['conceptos'].add(conceptoMap);
@@ -588,6 +765,8 @@ class DatabaseService {
   ///
   /// Cette méthode est une façade pour la méthode `advancedSearch` du DAO de concept,
   /// mais elle ajoute la logique pour récupérer les mots-clés et documents associés.
+  ///
+  /// [langCode] : Code de langue pour la recherche et le tri des résultats.
   Future<List<Map<String, dynamic>>> searchConceptos({
     String? searchTerm,
     String? ministerioId,
@@ -596,11 +775,16 @@ class DatabaseService {
     String? subCategoriaId,
     String? maxTasaExpedicion,
     String? maxTasaRenovacion,
+    String? langCode,
   }) async {
     try {
       if (_db == null) {
         throw Exception('Database not initialized');
       }
+
+      // Utiliser la langue spécifiée ou la langue active de l'application
+      final String effectiveLangCode =
+          langCode ?? LocalizationService.instance.currentLanguage;
 
       // Effectuer la recherche de base
       final conceptos = await conceptoDao.advancedSearch(
@@ -611,6 +795,7 @@ class DatabaseService {
         subCategoriaId: subCategoriaId,
         maxTasaExpedicion: maxTasaExpedicion,
         maxTasaRenovacion: maxTasaRenovacion,
+        langCode: effectiveLangCode,
       );
 
       // Enrichir les résultats avec les informations supplémentaires
@@ -620,12 +805,20 @@ class DatabaseService {
         final result = concepto.toMap();
 
         // Récupérer les documents requis
-        final documents = await documentRequisDao.getByConceptoId(concepto.id);
+        final documents = await documentRequisDao.getByConceptoId(concepto.id,
+            langCode: effectiveLangCode);
         result['documentos'] = documents.map((doc) => doc.toMap()).toList();
 
         // Récupérer les mots-clés
-        final keywords = await motCleDao.getMotsClesByConceptoId(concepto.id);
+        final keywords = await motCleDao.getMotsClesByConceptoId(concepto.id,
+            langCode: effectiveLangCode);
         result['palabras_clave'] = keywords;
+
+        // Récupérer les procédures (nouvelle fonctionnalité)
+        final procedures = await procedureDao.getByConceptoId(concepto.id,
+            orderBy: 'orden', langCode: effectiveLangCode);
+        result['procedimientos'] =
+            procedures.map((proc) => proc.toMap()).toList();
 
         // Vérifier si ce concept est un favori
         result['es_favorito'] = await favoriDao.isFavorite(concepto.id);
@@ -634,21 +827,24 @@ class DatabaseService {
         final subCategoria =
             await subCategoriaDao.getById(concepto.subCategoriaId);
         if (subCategoria != null) {
-          result['sub_categoria_nombre'] = subCategoria.nombre;
+          // Utiliser la langue spécifiée pour récupérer le nom
+          result['sub_categoria_nombre'] =
+              subCategoria.getNombre(effectiveLangCode);
 
           final categoria =
               await categoriaDao.getById(subCategoria.categoriaId);
           if (categoria != null) {
-            result['categoria_nombre'] = categoria.nombre;
+            result['categoria_nombre'] = categoria.getNombre(effectiveLangCode);
 
             final sector = await sectorDao.getById(categoria.sectorId);
             if (sector != null) {
-              result['sector_nombre'] = sector.nombre;
+              result['sector_nombre'] = sector.getNombre(effectiveLangCode);
 
               final ministerio =
                   await ministerioDao.getById(sector.ministerioId);
               if (ministerio != null) {
-                result['ministerio_nombre'] = ministerio.nombre;
+                result['ministerio_nombre'] =
+                    ministerio.getNombre(effectiveLangCode);
               }
             }
           }
@@ -667,12 +863,17 @@ class DatabaseService {
   /// Récupère un concept avec toutes ses relations et informations hiérarchiques.
   ///
   /// Cette méthode est utile pour afficher les détails complets d'une taxe.
-  Future<Map<String, dynamic>?> getConceptoWithDetails(
-      String conceptoId) async {
+  /// [langCode] : Code de langue à utiliser pour les données traduisibles.
+  Future<Map<String, dynamic>?> getConceptoWithDetails(String conceptoId,
+      {String? langCode}) async {
     try {
       if (_db == null) {
         throw Exception('Database not initialized');
       }
+
+      // Utiliser la langue spécifiée ou la langue active de l'application
+      final String effectiveLangCode =
+          langCode ?? LocalizationService.instance.currentLanguage;
 
       final concepto = await conceptoDao.getById(conceptoId);
       if (concepto == null) {
@@ -682,13 +883,21 @@ class DatabaseService {
       // Construire le résultat enrichi
       final result = concepto.toMap();
 
-      // Récupérer les documents requis
-      final documents = await documentRequisDao.getByConceptoId(conceptoId);
+      // Récupérer les documents requis avec la langue spécifiée
+      final documents = await documentRequisDao.getByConceptoId(conceptoId,
+          langCode: effectiveLangCode);
       result['documentos'] = documents.map((doc) => doc.toMap()).toList();
 
-      // Récupérer les mots-clés
-      final keywords = await motCleDao.getMotsClesByConceptoId(conceptoId);
+      // Récupérer les mots-clés dans la langue spécifiée
+      final keywords = await motCleDao.getMotsClesByConceptoId(conceptoId,
+          langCode: effectiveLangCode);
       result['palabras_clave'] = keywords;
+
+      // Récupérer les procédures dans la langue spécifiée (nouvelle fonctionnalité)
+      final procedures = await procedureDao.getByConceptoId(conceptoId,
+          orderBy: 'orden', langCode: effectiveLangCode);
+      result['procedimientos'] =
+          procedures.map((proc) => proc.toMap()).toList();
 
       // Vérifier si ce concept est un favori
       result['es_favorito'] = await favoriDao.isFavorite(conceptoId);
@@ -697,23 +906,50 @@ class DatabaseService {
       final subCategoria =
           await subCategoriaDao.getById(concepto.subCategoriaId);
       if (subCategoria != null) {
-        result['sub_categoria'] = subCategoria.toMap();
+        final subCategoriaMap = subCategoria.toMap();
+
+        // Ajouter le nom dans la langue spécifiée
+        subCategoriaMap['nombre_current'] =
+            subCategoria.getNombre(effectiveLangCode);
+
+        result['sub_categoria'] = subCategoriaMap;
 
         final categoria = await categoriaDao.getById(subCategoria.categoriaId);
         if (categoria != null) {
-          result['categoria'] = categoria.toMap();
+          final categoriaMap = categoria.toMap();
+
+          // Ajouter le nom dans la langue spécifiée
+          categoriaMap['nombre_current'] =
+              categoria.getNombre(effectiveLangCode);
+
+          result['categoria'] = categoriaMap;
 
           final sector = await sectorDao.getById(categoria.sectorId);
           if (sector != null) {
-            result['sector'] = sector.toMap();
+            final sectorMap = sector.toMap();
+
+            // Ajouter le nom dans la langue spécifiée
+            sectorMap['nombre_current'] = sector.getNombre(effectiveLangCode);
+
+            result['sector'] = sectorMap;
 
             final ministerio = await ministerioDao.getById(sector.ministerioId);
             if (ministerio != null) {
-              result['ministerio'] = ministerio.toMap();
+              final ministerioMap = ministerio.toMap();
+
+              // Ajouter le nom dans la langue spécifiée
+              ministerioMap['nombre_current'] =
+                  ministerio.getNombre(effectiveLangCode);
+
+              result['ministerio'] = ministerioMap;
             }
           }
         }
       }
+
+      // Ajouter les langues disponibles pour chaque type de contenu traduisible
+      result['available_languages'] =
+          await conceptoDao.getAvailableLanguagesForConcepto(conceptoId);
 
       return result;
     } catch (e) {
@@ -726,11 +962,17 @@ class DatabaseService {
   /// Récupère tous les favoris avec les détails des concepts associés.
   ///
   /// Cette méthode est utile pour afficher la liste des favoris.
-  Future<List<Map<String, dynamic>>> getFavoritesWithDetails() async {
+  /// [langCode] : Code de langue à utiliser pour les données traduisibles.
+  Future<List<Map<String, dynamic>>> getFavoritesWithDetails(
+      {String? langCode}) async {
     try {
       if (_db == null) {
         throw Exception('Database not initialized');
       }
+
+      // Utiliser la langue spécifiée ou la langue active de l'application
+      final String effectiveLangCode =
+          langCode ?? LocalizationService.instance.currentLanguage;
 
       final favoris = await favoriDao.getAll();
       final results = <Map<String, dynamic>>[];
@@ -738,10 +980,14 @@ class DatabaseService {
       for (final favori in favoris) {
         final result = favori.toMap();
 
-        // Récupérer le concept associé
-        final conceptoDetails = await getConceptoWithDetails(favori.conceptoId);
+        // Récupérer le concept associé avec la langue spécifiée
+        final conceptoDetails = await getConceptoWithDetails(favori.conceptoId,
+            langCode: effectiveLangCode);
         if (conceptoDetails != null) {
           result['concepto'] = conceptoDetails;
+          // Format de date localisé
+          result['fecha_formatted'] =
+              favori.getLocalizedDate(effectiveLangCode);
           results.add(result);
         }
       }
@@ -751,6 +997,162 @@ class DatabaseService {
       developer.log('Error getting favorites with details: $e',
           name: 'DatabaseService');
       throw Exception('Could not get favorites with details: $e');
+    }
+  }
+
+  /// Récupère toutes les taxes regroupées par ministère.
+  ///
+  /// Cette méthode est utile pour la présentation des données organisées par ministère.
+  /// [langCode] : Code de langue à utiliser pour les données traduisibles.
+  Future<List<Map<String, dynamic>>> getConceptosByMinisterio(
+      {String? langCode}) async {
+    try {
+      if (_db == null) {
+        throw Exception('Database not initialized');
+      }
+
+      // Utiliser la langue spécifiée ou la langue active de l'application
+      final String effectiveLangCode =
+          langCode ?? LocalizationService.instance.currentLanguage;
+
+      // Récupérer tous les ministères
+      final ministerios =
+          await ministerioDao.getAll(langCode: effectiveLangCode);
+      final results = <Map<String, dynamic>>[];
+
+      for (final ministerio in ministerios) {
+        final ministerioMap = ministerio.toMap();
+        ministerioMap['nombre_current'] =
+            ministerio.getNombre(effectiveLangCode);
+
+        // Récupérer tous les conceptos pour ce ministère
+        final conceptos = await _db!.rawQuery('''
+          SELECT c.* FROM ${DatabaseSchema.tableConceptos} c
+          JOIN ${DatabaseSchema.tableSubCategorias} sc ON c.sub_categoria_id = sc.id
+          JOIN ${DatabaseSchema.tableCategorias} cat ON sc.categoria_id = cat.id
+          JOIN ${DatabaseSchema.tableSectores} s ON cat.sector_id = s.id
+          WHERE s.ministerio_id = ?
+          ORDER BY c.nombre_$effectiveLangCode
+        ''', [ministerio.id]);
+
+        // Convertir les résultats en objets Concepto
+        final conceptosList =
+            conceptos.map((map) => Concepto.fromMap(map)).toList();
+
+        // Enrichir les données des conceptos
+        List<Map<String, dynamic>> conceptosEnriched = [];
+        for (final concepto in conceptosList) {
+          // Récupérer les détails simplifiés pour l'affichage dans une liste
+          final conceptoMap = concepto.toMap();
+          conceptoMap['nombre_current'] = concepto.getNombre(effectiveLangCode);
+          conceptosEnriched.add(conceptoMap);
+        }
+
+        ministerioMap['conceptos'] = conceptosEnriched;
+        results.add(ministerioMap);
+      }
+
+      return results;
+    } catch (e) {
+      developer.log('Error getting conceptos by ministerio: $e',
+          name: 'DatabaseService');
+      throw Exception('Could not get conceptos by ministerio: $e');
+    }
+  }
+
+  /// Récupère des statistiques sur la disponibilité des traductions.
+  ///
+  /// Cette méthode est utile pour visualiser l'état des traductions dans l'application
+  /// et identifier les zones qui nécessitent des traductions supplémentaires.
+  Future<Map<String, Map<String, int>>> getTranslationStatistics() async {
+    try {
+      if (_db == null) {
+        throw Exception('Database not initialized');
+      }
+
+      final Map<String, Map<String, int>> stats = {};
+
+      // Initialiser la structure de résultats pour chaque langue supportée
+      for (final lang in DatabaseSchema.supportedLanguages) {
+        stats[lang] = {
+          'ministerios_total': 0,
+          'ministerios_translated': 0,
+          'sectores_total': 0,
+          'sectores_translated': 0,
+          'categorias_total': 0,
+          'categorias_translated': 0,
+          'sub_categorias_total': 0,
+          'sub_categorias_translated': 0,
+          'conceptos_total': 0,
+          'conceptos_nombre_translated': 0,
+          'conceptos_procedimiento_translated': 0,
+          'conceptos_documentos_translated': 0,
+        };
+      }
+
+      // Compter les ministères
+      final ministeriosTotal = await ministerioDao.count();
+      for (final lang in DatabaseSchema.supportedLanguages) {
+        stats[lang]!['ministerios_total'] = ministeriosTotal;
+        final ministeriosTranslated =
+            await ministerioDao.getMinisteriosWithTranslation(lang);
+        stats[lang]!['ministerios_translated'] = ministeriosTranslated.length;
+      }
+
+      // Compter les secteurs
+      final sectoresTotal = await sectorDao.count();
+      for (final lang in DatabaseSchema.supportedLanguages) {
+        stats[lang]!['sectores_total'] = sectoresTotal;
+        final sectoresTranslated =
+            await sectorDao.getSectorsWithTranslation(lang);
+        stats[lang]!['sectores_translated'] = sectoresTranslated.length;
+      }
+
+      // Compter les catégories
+      final categoriasTotal = await categoriaDao.count();
+      for (final lang in DatabaseSchema.supportedLanguages) {
+        stats[lang]!['categorias_total'] = categoriasTotal;
+        final categoriasTranslated =
+            await categoriaDao.getCategoriasWithTranslation(lang);
+        stats[lang]!['categorias_translated'] = categoriasTranslated.length;
+      }
+
+      // Compter les sous-catégories
+      final subCategoriasTotal = await subCategoriaDao.count();
+      for (final lang in DatabaseSchema.supportedLanguages) {
+        stats[lang]!['sub_categorias_total'] = subCategoriasTotal;
+        final subCategoriasTranslated =
+            await subCategoriaDao.getSubCategoriasWithTranslation(lang);
+        stats[lang]!['sub_categorias_translated'] =
+            subCategoriasTranslated.length;
+      }
+
+      // Compter les concepts et leurs traductions
+      final conceptosTotal = await conceptoDao.count();
+      for (final lang in DatabaseSchema.supportedLanguages) {
+        stats[lang]!['conceptos_total'] = conceptosTotal;
+
+        final conceptosNombreTranslated =
+            await conceptoDao.getConceptosWithNombreTranslation(lang);
+        stats[lang]!['conceptos_nombre_translated'] =
+            conceptosNombreTranslated.length;
+
+        final conceptosProcedimientoTranslated =
+            await conceptoDao.getConceptosWithProcedimientoTranslation(lang);
+        stats[lang]!['conceptos_procedimiento_translated'] =
+            conceptosProcedimientoTranslated.length;
+
+        final conceptosDocumentosTranslated = await conceptoDao
+            .getConceptosWithDocumentosRequeridosTranslation(lang);
+        stats[lang]!['conceptos_documentos_translated'] =
+            conceptosDocumentosTranslated.length;
+      }
+
+      return stats;
+    } catch (e) {
+      developer.log('Error getting translation statistics: $e',
+          name: 'DatabaseService');
+      throw Exception('Could not get translation statistics: $e');
     }
   }
 

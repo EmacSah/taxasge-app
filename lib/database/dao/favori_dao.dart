@@ -7,6 +7,8 @@ import 'dart:developer' as developer;
 ///
 /// Cette classe fournit les méthodes pour effectuer les opérations CRUD
 /// (Create, Read, Update, Delete) sur la table des favoris dans la base de données.
+/// Bien que les favoris ne soient pas directement multilingues, ce DAO est adapté
+/// pour fonctionner avec le reste du système qui supporte le multilinguisme.
 class FavoriDao {
   /// Instance de la base de données
   final Database _db;
@@ -269,6 +271,77 @@ class FavoriDao {
     } catch (e) {
       developer.log('Error getting favoris added after date: $e', name: 'FavoriDao');
       throw Exception('Could not get favoris added after date: $e');
+    }
+  }
+  
+  /// Récupère les favoris pour les concepts d'un ministère spécifique.
+  ///
+  /// Cette méthode utilise des jointures pour trouver tous les favoris associés
+  /// à des concepts qui appartiennent à un ministère spécifique.
+  Future<List<Favori>> getFavorisByMinisterioId(String ministerioId) async {
+    try {
+      final query = '''
+        SELECT f.* FROM $_tableName f
+        JOIN ${DatabaseSchema.tableConceptos} c ON f.concepto_id = c.id
+        JOIN ${DatabaseSchema.tableSubCategorias} sc ON c.sub_categoria_id = sc.id
+        JOIN ${DatabaseSchema.tableCategorias} cat ON sc.categoria_id = cat.id
+        JOIN ${DatabaseSchema.tableSectores} s ON cat.sector_id = s.id
+        WHERE s.ministerio_id = ?
+        ORDER BY f.fecha_agregado DESC
+      ''';
+      
+      final List<Map<String, dynamic>> maps = await _db.rawQuery(query, [ministerioId]);
+      
+      return maps.map((map) => Favori.fromMap(map)).toList();
+    } catch (e) {
+      developer.log('Error getting favoris by ministerio id: $e', name: 'FavoriDao');
+      throw Exception('Could not get favoris for ministerio: $e');
+    }
+  }
+  
+  /// Récupère les favoris groupés par date d'ajout.
+  ///
+  /// Cette méthode est utile pour afficher les favoris organisés par date
+  /// (aujourd'hui, hier, cette semaine, ce mois, etc.).
+  Future<Map<String, List<Favori>>> getFavorisGroupedByDate({String? langCode}) async {
+    try {
+      final List<Favori> allFavoris = await getAll();
+      final Map<String, List<Favori>> result = {};
+      final now = DateTime.now();
+      
+      for (final favori in allFavoris) {
+        final addedDate = DateTime.parse(favori.fechaAgregado);
+        final difference = now.difference(addedDate);
+        
+        String category;
+        if (difference.inDays == 0) {
+          category = (langCode == 'fr') ? 'Aujourd\'hui' : 
+                    (langCode == 'en') ? 'Today' : 'Hoy';
+        } else if (difference.inDays == 1) {
+          category = (langCode == 'fr') ? 'Hier' : 
+                    (langCode == 'en') ? 'Yesterday' : 'Ayer';
+        } else if (difference.inDays < 7) {
+          category = (langCode == 'fr') ? 'Cette semaine' : 
+                    (langCode == 'en') ? 'This week' : 'Esta semana';
+        } else if (difference.inDays < 30) {
+          category = (langCode == 'fr') ? 'Ce mois' : 
+                    (langCode == 'en') ? 'This month' : 'Este mes';
+        } else {
+          category = (langCode == 'fr') ? 'Plus ancien' : 
+                    (langCode == 'en') ? 'Older' : 'Más antiguo';
+        }
+        
+        if (!result.containsKey(category)) {
+          result[category] = [];
+        }
+        
+        result[category]!.add(favori);
+      }
+      
+      return result;
+    } catch (e) {
+      developer.log('Error getting favoris grouped by date: $e', name: 'FavoriDao');
+      throw Exception('Could not get favoris grouped by date: $e');
     }
   }
 }
