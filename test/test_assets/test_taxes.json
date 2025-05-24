@@ -1,28 +1,60 @@
 [
   {
     "id": "M-001",
-    "nombre": "MINISTÈRE TEST",
+    "nombre": {
+      "es": "MINISTERIO TEST",
+      "fr": "MINISTÈRE TEST",
+      "en": "TEST MINISTRY"
+    },
     "sectores": [
       {
         "id": "S-001",
-        "nombre": "SECTEUR TEST",
+        "nombre": {
+          "es": "SECTOR TEST",
+          "fr": "SECTEUR TEST",
+          "en": "TEST SECTOR"
+        },
         "categorias": [
           {
             "id": "C-001",
-            "nombre": "CATÉGORIE TEST",
+            "nombre": {
+              "es": "CATEGORÍA TEST",
+              "fr": "CATÉGORIE TEST",
+              "en": "TEST CATEGORY"
+            },
             "sub_categorias": [
               {
                 "id": "SC-001",
-                "nombre": "SOUS-CATÉGORIE TEST",
+                "nombre": {
+                  "es": "SUBCATEGORÍA TEST",
+                  "fr": "SOUS-CATÉGORIE TEST",
+                  "en": "TEST SUBCATEGORY"
+                },
                 "conceptos": [
                   {
                     "id": "T-001",
-                    "nombre": "TAXE TEST",
+                    "nombre": {
+                      "es": "IMPUESTO TEST",
+                      "fr": "TAXE TEST",
+                      "en": "TEST TAX"
+                    },
                     "tasa_expedicion": "1000",
                     "tasa_renovacion": "500",
-                    "documentos_requeridos": "Document 1\nDocument 2",
-                    "procedimiento": "Procédure test",
-                    "palabras_clave": "test, taxe, exemple"
+                    "documentos_requeridos": {
+                      "es": "Copia del pasaporte vigente\nFoto tamaño carnet (formato JPG o PNG)",
+                      "fr": "Copie du passeport en cours de validité\nPhoto d'identité (format JPG ou PNG)",
+                      "en": "Copy of a valid passport\nPassport-size photo (JPG or PNG)"
+                    },
+                    "procedimiento": {
+                      "es": "Paso 1 : Rellenar el formulario de solicitud.\nPaso 2 : Pagar la tasa correspondiente.",
+                      "fr": "Étape 1 : Remplir le formulaire de demande.\nÉtape 2 : Régler la taxe correspondante.",
+                      "en": "Step 1: Fill in the application form.\nStep 2: Pay the applicable fee"
+                    },
+                    "palabras_clave": {
+                      "es": "prueba, impuesto, ejemplo",
+                      "fr": "test, taxe, exemple",
+                      "en": "test, tax, example"
+                    }
                   }
                 ]
               }

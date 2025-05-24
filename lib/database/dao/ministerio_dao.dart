@@ -120,9 +120,25 @@ class MinisterioDao {
   /// [langCodeForSearch] : Code de langue à utiliser pour la recherche
   ///
   /// Retourne la liste de tous les ministères correspondant aux critères.
+  Future<List<Ministerio>> getMinisteriosWithTranslation(
+      String langCode) async {
+    try {
+      final List<Map<String, dynamic>> maps = await _db.query(
+        _tableName,
+        where: 'nombre_$langCode IS NOT NULL AND nombre_$langCode <> ""',
+      );
+
+      return maps.map((map) => Ministerio.fromMap(map)).toList();
+    } catch (e) {
+      developer.log('Error getting ministerios with translation: $e',
+          name: 'MinisterioDao');
+      throw Exception('Could not get ministerios with translation: $e');
+    }
+  }
+
   Future<List<Ministerio>> getAll({
     String? orderBy,
-    List<String>? langCodes,
+    List<String>? langCode,
     String? searchTerm,
     String? langCodeForSearch,
   }) async {
@@ -131,7 +147,7 @@ class MinisterioDao {
       final List<String> columns = ['id'];
 
       // Récupérer les colonnes de traduction pour les langues spécifiées ou toutes les langues
-      if (langCodes == null) {
+      if (langCode == null) {
         // Récupérer toutes les langues supportées
         columns.add('nombre'); // Colonne principale pour compatibilité
         for (final lang in DatabaseSchema.supportedLanguages) {
@@ -140,7 +156,7 @@ class MinisterioDao {
       } else {
         // Récupérer seulement les langues spécifiées
         columns.add('nombre'); // Colonne principale pour compatibilité
-        for (final lang in langCodes) {
+        for (final lang in langCode) {
           if (DatabaseSchema.supportedLanguages.contains(lang)) {
             columns.add('nombre_$lang');
           }
@@ -167,12 +183,19 @@ class MinisterioDao {
         }
       }
 
+      String? effectiveOrderBy = orderBy;
+      if (orderBy == null &&
+          langCode != null &&
+          DatabaseSchema.supportedLanguages.contains(langCode.first)) {
+        effectiveOrderBy = 'nombre_$langCode';
+      }
+
       final List<Map<String, dynamic>> maps = await _db.query(
         _tableName,
         columns: columns,
         where: whereClause,
         whereArgs: whereArgs,
-        orderBy: orderBy,
+        orderBy: effectiveOrderBy ?? 'nombre',
       );
 
       return maps.map((map) => Ministerio.fromMap(map)).toList();

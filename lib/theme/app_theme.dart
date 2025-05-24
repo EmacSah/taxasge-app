@@ -316,12 +316,11 @@ class AppTheme {
       primary: primaryColor,
       secondary: secondaryColor,
       error: errorColor,
-      background: backgroundLight,
-      surface: backgroundWhite,
+      surface: backgroundLight,
+      //surface: backgroundWhite,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onError: Colors.white,
-      onBackground: textDark,
       onSurface: textDark,
     ),
 
@@ -463,24 +462,25 @@ class AppTheme {
     // Autres
     textTheme: textTheme,
     dividerColor: dividerColor,
-    splashColor: primaryColor.withOpacity(0.1),
-    highlightColor: primaryColor.withOpacity(0.05),
+    splashColor: primaryColor.withAlpha((0.1 * 255).toInt()),
+    highlightColor: primaryColor.withAlpha((0.05 * 255).toInt()),
   );
 
   /// Produit une version directionnelle du thème pour les langues RTL
   ///
   /// Cette méthode génère une variante du thème principal adaptée aux langues
   /// qui s'écrivent de droite à gauche (RTL) comme l'arabe.
-  static ThemeData getRtlTheme() {
-    return lightTheme.copyWith(
-      textDirection: TextDirection.rtl,
-      // Autres ajustements spécifiques pour RTL si nécessaire
-    );
-  }
+  //static ThemeData getRtlTheme() {
+  //  return lightTheme.copyWith(
+  //    textDirection: TextDirection.rtl,
+  // Autres ajustements spécifiques pour RTL si nécessaire
+  //  );
+  //}
 
   /// Obtient le thème approprié pour une langue donnée
   static ThemeData getLocalizedTheme(String langCode) {
-    return _isRtlLanguage(langCode) ? getRtlTheme() : lightTheme;
+    //return _isRtlLanguage(langCode) ? getRtlTheme() : lightTheme;
+    return lightTheme;
   }
 
   // ======== STYLES SPÉCIFIQUES DES COMPOSANTS ========
@@ -492,7 +492,7 @@ class AppTheme {
     border: Border.all(color: dividerColor),
     boxShadow: [
       BoxShadow(
-        color: Colors.black.withOpacity(0.05),
+        color: Colors.black.withAlpha((0.05 * 255).toInt()),
         blurRadius: 3,
         offset: const Offset(0, 1),
       ),
@@ -507,7 +507,7 @@ class AppTheme {
       borderRadius: BorderRadius.circular(borderRadiusMedium),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: Colors.black.withAlpha((0.1 * 255).toInt()),
           blurRadius: 4,
           offset: const Offset(0, 2),
         ),
@@ -536,7 +536,7 @@ class AppTheme {
 
   // Style pour les bulles du chatbot (utilisateur)
   static BoxDecoration userChatBubbleDecoration = BoxDecoration(
-    color: primaryColor.withOpacity(0.1),
+    color: primaryColor.withAlpha((0.1 * 255).toInt()),
     borderRadius: BorderRadius.circular(borderRadiusMedium).copyWith(
       topRight: const Radius.circular(0),
     ),
@@ -564,7 +564,7 @@ class AppTheme {
     final isRtl = _isRtlLanguage(langCode);
 
     return BoxDecoration(
-      color: primaryColor.withOpacity(0.1),
+      color: primaryColor.withAlpha((0.1 * 255).toInt()),
       borderRadius: BorderRadius.circular(borderRadiusMedium).copyWith(
         // Inverser le coin carré selon la direction
         topRight: isRtl ? null : const Radius.circular(0),

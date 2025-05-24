@@ -21,7 +21,7 @@ class ProcedureDao {
   final List<String> _supportedLanguages = DatabaseSchema.supportedLanguages;
   
   /// Langue par défaut
-  final String _defaultLanguage = DatabaseSchema.defaultLanguage;
+  /// final String _defaultLanguage = DatabaseSchema.defaultLanguage;
   
   /// Insère une nouvelle procédure dans la base de données.
   ///

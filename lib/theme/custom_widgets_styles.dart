@@ -24,8 +24,8 @@ class CustomWidgetStyles {
     String? langCode,
   }) {
     // Obtenir la langue active de l'application si non spécifiée
-    final effectiveLangCode =
-        langCode ?? LocalizationService.instance.currentLanguage;
+    //final effectiveLangCode =
+    //    langCode ?? LocalizationService.instance.currentLanguage;
 
     // Si aucune couleur n'est fournie, utiliser la couleur dynamique basée sur le nom du ministère
     final color = backgroundColor ?? AppTheme.getMinistryColor(title);
@@ -104,7 +104,7 @@ class CustomWidgetStyles {
                 height: 40,
                 decoration: BoxDecoration(
                   color: iconBackgroundColor ??
-                      AppTheme.primaryColor.withOpacity(0.1),
+                      AppTheme.primaryColor.withAlpha((0.1 * 255).toInt()),
                   borderRadius:
                       BorderRadius.circular(AppTheme.borderRadiusSmall),
                 ),
@@ -485,7 +485,7 @@ class CustomWidgetStyles {
         vertical: AppTheme.paddingSmall,
         horizontal: AppTheme.paddingMedium,
       ),
-      color: AppTheme.warningColor.withOpacity(0.2),
+      color: AppTheme.warningColor.withAlpha((0.2 * 255).toInt()),
       child: Row(
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -621,7 +621,8 @@ class CustomWidgetStyles {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor
+                            .withAlpha((0.1 * 255).toInt()),
                         borderRadius:
                             BorderRadius.circular(AppTheme.borderRadiusSmall),
                       ),

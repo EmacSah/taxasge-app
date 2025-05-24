@@ -1,0 +1,7 @@
+2025-05-20 10:03:29.796306: I tensorflow/core/util/port.cc:110] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-05-20 10:03:29.831449: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2025-05-20 10:03:35,581 - INFO - Démarrage de l'entraînement...
+2025-05-20 10:03:35,581 - INFO - Corpus: /home/user/taxasge-app/assets/ml/training_corpus.json
+2025-05-20 10:03:35,581 - INFO - Sortie: /home/user/taxasge-app/assets/ml
+✅ Tokenizers générés (pickle + json) → /home/user/taxasge-app/assets/ml

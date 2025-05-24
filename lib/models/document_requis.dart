@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 /// Modèle de données représentant un document requis avec support multilingue.
 ///
 /// Cette classe correspond à l'entité "documento_requerido" dans la base de données
@@ -32,85 +30,98 @@ class DocumentRequis {
   /// Si la langue n'est pas disponible, essaie la langue par défaut
   /// Si la langue par défaut n'est pas disponible, prend la première traduction disponible
   String getNombre(String langCode) {
-    return nombreTraductions[langCode] ??
-        nombreTraductions[langueParDefaut] ??
-        nombreTraductions.values
-            .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+    if (nombreTraductions.containsKey(langCode)) {
+      return nombreTraductions[langCode]!;
+    }
+
+    if (nombreTraductions.containsKey(langueParDefaut)) {
+      return nombreTraductions[langueParDefaut]!;
+    }
+
+    return nombreTraductions.values.firstWhere(
+      (value) => value.isNotEmpty,
+      orElse: () => '',
+    );
   }
 
   /// Accesseur de compatibilité avec l'ancien code (retourne la version espagnole)
   String get nombre => getNombre(langueParDefaut);
 
   /// Retourne la description dans la langue spécifiée
-  /// Si la langue n'est pas disponible, essaie la langue par défaut
-  /// Si la langue par défaut n'est pas disponible ou si descriptionTraductions est null, retourne null
+  /// Si la langue n'est pas disponible ou si descriptionTraductions est null, retourne null
   String? getDescription(String langCode) {
     if (descriptionTraductions == null) return null;
 
-    return descriptionTraductions![langCode] ??
-        descriptionTraductions![langueParDefaut] ??
-        descriptionTraductions!.values
-            .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+    if (descriptionTraductions!.containsKey(langCode)) {
+      return descriptionTraductions![langCode];
+    }
+
+    if (descriptionTraductions!.containsKey(langueParDefaut)) {
+      return descriptionTraductions![langueParDefaut];
+    }
+
+    return descriptionTraductions!.values.firstWhere(
+      (value) => value.isNotEmpty,
+      orElse: () => '',
+    );
   }
 
   /// Accesseur de compatibilité avec l'ancien code (retourne la version espagnole)
   String? get description => getDescription(langueParDefaut);
 
   /// Crée une instance de DocumentRequis à partir d'une Map.
-  ///
-  /// Cette méthode est utilisée pour convertir les données de la base de données
-  /// en objet DocumentRequis.
   factory DocumentRequis.fromMap(Map<String, dynamic> map) {
     // Obtenir le nom avec support pour le format normalisé (colonnes par langue)
     final Map<String, String> nombreTraductions = {};
 
     // Format standard de la base de données (colonnes pour chaque langue)
     if (map['nombre_es'] != null) {
-      nombreTraductions['es'] = map['nombre_es'];
+      nombreTraductions['es'] = map['nombre_es'] as String;
     }
     if (map['nombre_fr'] != null) {
-      nombreTraductions['fr'] = map['nombre_fr'];
+      nombreTraductions['fr'] = map['nombre_fr'] as String;
     }
     if (map['nombre_en'] != null) {
-      nombreTraductions['en'] = map['nombre_en'];
+      nombreTraductions['en'] = map['nombre_en'] as String;
     }
 
     // Si aucune traduction trouvée, utiliser le champ 'nombre' comme valeur espagnole
     if (nombreTraductions.isEmpty && map['nombre'] != null) {
-      nombreTraductions['es'] = map['nombre'];
+      nombreTraductions['es'] = map['nombre'] as String;
     }
 
     // Description - même logique
-    final Map<String, String>? descriptionTraductions = {};
+    Map<String, String>? descriptionTraductions;
+    if (map['description_es'] != null ||
+        map['description_fr'] != null ||
+        map['description_en'] != null) {
+      descriptionTraductions = {};
 
-    if (map['description_es'] != null) {
-      descriptionTraductions['es'] = map['description_es'];
-    }
-    if (map['description_fr'] != null) {
-      descriptionTraductions['fr'] = map['description_fr'];
-    }
-    if (map['description_en'] != null) {
-      descriptionTraductions['en'] = map['description_en'];
-    }
+      if (map['description_es'] != null) {
+        descriptionTraductions['es'] = map['description_es'] as String;
+      }
+      if (map['description_fr'] != null) {
+        descriptionTraductions['fr'] = map['description_fr'] as String;
+      }
+      if (map['description_en'] != null) {
+        descriptionTraductions['en'] = map['description_en'] as String;
+      }
 
-    // Si aucune traduction trouvée, utiliser le champ 'description' comme valeur espagnole
-    if (descriptionTraductions.isEmpty && map['description'] != null) {
-      descriptionTraductions['es'] = map['description'];
+      // Si une seule traduction existe, l'utiliser comme valeur espagnole
+      if (descriptionTraductions.isEmpty && map['description'] != null) {
+        descriptionTraductions['es'] = map['description'] as String;
+      }
     }
 
     return DocumentRequis(
-      id: map['id'],
-      conceptoId: map['concepto_id'],
+      id: map['id'] as int,
+      conceptoId: map['concepto_id'] as String,
       nombreTraductions: nombreTraductions,
-      descriptionTraductions:
-          descriptionTraductions.isEmpty ? null : descriptionTraductions,
+      descriptionTraductions: descriptionTraductions,
     );
   }
 
   /// Crée une instance de DocumentRequis à partir d'un JSON.
-  ///
-  /// Cette méthode est utilisée pour convertir les données JSON
-  /// en objet DocumentRequis, avec support pour le format multilingue.
   factory DocumentRequis.fromJson(Map<String, dynamic> json) {
     // Valeurs par défaut
     final Map<String, String> nombreTraductions = {};
@@ -138,7 +149,7 @@ class DocumentRequis {
       if (descriptionData is String) {
         // Ancien format (chaîne simple) - considéré comme espagnol
         descriptionTraductions['es'] = descriptionData;
-      } else if (descriptionData is Map) {
+      } else if (descriptionData is Map<String, dynamic>) {
         // Nouveau format (objet de traduction)
         descriptionData.forEach((key, value) {
           if (value is String) {
@@ -155,16 +166,13 @@ class DocumentRequis {
 
     return DocumentRequis(
       id: json['id'] ?? 0,
-      conceptoId: json['concepto_id'],
+      conceptoId: json['concepto_id'] as String,
       nombreTraductions: nombreTraductions,
       descriptionTraductions: descriptionTraductions,
     );
   }
 
   /// Convertit cette instance en Map.
-  ///
-  /// Cette méthode est utilisée pour préparer l'objet à être stocké
-  /// dans la base de données (en format dénormalisé avec colonnes par langue).
   Map<String, dynamic> toMap() {
     final map = {
       'id': id != 0 ? id : null, // Ne pas inclure l'ID s'il n'est pas défini
@@ -195,26 +203,21 @@ class DocumentRequis {
   }
 
   /// Convertit cette instance en Map JSON avec format multilingue.
-  ///
-  /// Cette méthode est utilisée pour sérialiser l'objet en JSON.
   Map<String, dynamic> toJson() {
-    final json = {
+    final map = <String, dynamic>{
       'id': id,
       'concepto_id': conceptoId,
-      'nombre': nombreTraductions,
+      'nombre': Map<String, String>.from(nombreTraductions),
     };
 
     if (descriptionTraductions != null) {
-      json['description'] = descriptionTraductions;
+      map['description'] = Map<String, String>.from(descriptionTraductions!);
     }
 
-    return json;
+    return map;
   }
 
   /// Crée une copie de cette instance avec les champs spécifiés remplacés.
-  ///
-  /// Cette méthode est utile pour créer une version modifiée d'un objet
-  /// sans altérer l'original.
   DocumentRequis copyWith({
     int? id,
     String? conceptoId,
@@ -251,8 +254,7 @@ class DocumentRequis {
 
   /// Vérifie si ce document a une description dans la langue spécifiée.
   bool hasDescriptionInLanguage(String langCode) {
-    return descriptionTraductions != null &&
-        descriptionTraductions!.containsKey(langCode) &&
+    return descriptionTraductions?.containsKey(langCode) == true &&
         descriptionTraductions![langCode]!.isNotEmpty;
   }
 
@@ -288,10 +290,9 @@ class DocumentRequis {
   }
 
   @override
-  int get hashCode {
-    return id.hashCode ^
-        conceptoId.hashCode ^
-        nombreTraductions.hashCode ^
-        descriptionTraductions.hashCode;
-  }
+  int get hashCode =>
+      id.hashCode ^
+      conceptoId.hashCode ^
+      nombreTraductions.hashCode ^
+      descriptionTraductions.hashCode;
 }

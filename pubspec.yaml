@@ -1,6 +1,6 @@
 name: taxasge
 description: Application de consultation des taxes fiscales de Guinée Équatoriale.
-publish_to: 'none'
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
@@ -27,6 +27,7 @@ dependencies:
   yaml: ^3.1.0  # Ajout du package yaml
   material_color_utilities: ^0.11.1  # Mise à jour de la version
   vm_service: ^14.3.1  # Mise à jour de la version
+  google_fonts: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -35,7 +36,7 @@ dev_dependencies:
   mockito: ^5.4.4
   build_runner: ^2.4.10
   test: ^1.24.9
-  sqflite_common_ffi: ^2.3.5
+  sqflite_common_ffi: ^2.3.0
 
 flutter:
   uses-material-design: true
@@ -43,8 +44,11 @@ flutter:
     - assets/data/taxes.json
     - assets/data/taxes_schema.json
     - assets/ml/taxasge_model.tflite
+    - assets/ml/taxasge_model_question_tokenizer.json
+    - assets/ml/taxasge_model_answer_tokenizer.json
     - assets/images/
     - assets/icons/
+    - assets/fonts/
 
 flutter_test:
   assets:

@@ -535,7 +535,7 @@ class DatabaseService {
         // Insérer les documents requis
         int docCount = 0;
         for (final entry in documentosMap.entries) {
-          final conceptoId = entry.key;
+          //final conceptoId = entry.key;
           final documents = entry.value;
 
           for (final doc in documents) {
@@ -553,7 +553,6 @@ class DatabaseService {
         // Insérer les mots-clés
         int motCleCount = 0;
         for (final entry in motsClesMap.entries) {
-          final conceptoId = entry.key;
           final motsClesMulti = entry.value;
 
           final motsCles = motsClesMulti.toMotsCles();
@@ -630,8 +629,12 @@ class DatabaseService {
       final String effectiveLangCode =
           langCode ?? LocalizationService.instance.currentLanguage;
 
+      // Convertir effectiveLangCode en une liste de chaînes de caractères
+      final List<String> effectiveLangCodes = [effectiveLangCode];
+
       // Récupérer toutes les données
-      final ministerios = await ministerioDao.getAll(orderBy: 'id');
+      final ministerios =
+          await ministerioDao.getAll(langCode: effectiveLangCodes);
       final Map<String, dynamic> exportData = {'ministerios': []};
 
       for (final ministerio in ministerios) {
@@ -1012,12 +1015,20 @@ class DatabaseService {
       }
 
       // Utiliser la langue spécifiée ou la langue active de l'application
-      final String effectiveLangCode =
+      final effectiveLangCode =
           langCode ?? LocalizationService.instance.currentLanguage;
 
+      // Vérifier si la langue est supportée
+      if (!DatabaseSchema.supportedLanguages.contains(effectiveLangCode)) {
+        throw Exception('Langue non supportée: $effectiveLangCode');
+      }
+
+      // Convertir effectiveLangCode en une liste de chaînes de caractères
+      final List<String> effectiveLangCodes = [effectiveLangCode];
+
       // Récupérer tous les ministères
-      final ministerios =
-          await ministerioDao.getAll(langCode: effectiveLangCode);
+      final ministerios = await ministerioDao.getAll(
+          orderBy: 'nombre_$effectiveLangCode', langCode: effectiveLangCodes);
       final results = <Map<String, dynamic>>[];
 
       for (final ministerio in ministerios) {

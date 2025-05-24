@@ -268,27 +268,39 @@ class Concepto {
     map['nombre'] = nombre;
 
     // Ajouter les traductions des documents requis si présentes
-    if (documentosRequeridosTraductions != null) {
-      documentosRequeridosTraductions!.forEach((langCode, value) {
-        map['documentos_requeridos_$langCode'] = value;
-      });
+    //if (documentosRequeridosTraductions != null) {
+    //  documentosRequeridosTraductions!.forEach((langCode, value) {
+    //    map['documentos_requeridos_$langCode'] = value;
+    //  });
 
-      // Compatibilité avec l'ancien format
-      map['documentos_requeridos'] = getDocumentosRequeridos(langueParDefaut);
+    // Compatibilité avec l'ancien format
+    //  map['documentos_requeridos'] = getDocumentosRequeridos(langueParDefaut);
+    //} else {
+    //  map['documentos_requeridos'] = null;
+    //}
+
+    if (documentosRequeridosTraductions?.isNotEmpty ?? false) {
+      map['documentos_requeridos'] =
+          getDocumentosRequeridos(langueParDefaut) ?? '';
     } else {
-      map['documentos_requeridos'] = null;
+      map['documentos_requeridos'] = '';
     }
 
     // Ajouter les traductions de la procédure si présentes
-    if (procedimientoTraductions != null) {
-      procedimientoTraductions!.forEach((langCode, value) {
-        map['procedimiento_$langCode'] = value;
-      });
+    //if (procedimientoTraductions != null) {
+    //  procedimientoTraductions!.forEach((langCode, value) {
+    //    map['procedimiento_$langCode'] = value;
+    //  });
 
-      // Compatibilité avec l'ancien format
-      map['procedimiento'] = procedimiento;
+    // Compatibilité avec l'ancien format
+    //  map['procedimiento'] = procedimiento;
+    //} else {
+    //  map['procedimiento'] = null;
+    //}
+    if (procedimientoTraductions?.isNotEmpty ?? false) {
+      map['procedimiento'] = procedimiento ?? '';
     } else {
-      map['procedimiento'] = null;
+      map['procedimiento'] = '';
     }
 
     return map;
@@ -298,7 +310,8 @@ class Concepto {
   ///
   /// Cette méthode est utilisée pour sérialiser l'objet en JSON.
   Map<String, dynamic> toJson() {
-    final json = {
+    //final json = {
+    final json = <String, dynamic>{
       'id': id,
       'sub_categoria_id': subCategoriaId,
       'nombre': nombreTraductions,
@@ -306,12 +319,30 @@ class Concepto {
       'tasa_renovacion': tasaRenovacion,
     };
 
-    if (documentosRequeridosTraductions != null) {
-      json['documentos_requeridos'] = documentosRequeridosTraductions;
+    //if (documentosRequeridosTraductions != null) {
+    //json['documentos_requeridos'] = documentosRequeridosTraductions;
+    //  json['documentos_requeridos'] =
+    //      documentosRequeridosTraductions?.isEmpty ?? true
+    //          ? {} : documentosRequeridosTraductions;
+    //}
+
+    //if (procedimientoTraductions != null) {
+    // json['procedimiento'] = procedimientoTraductions;
+    //json['procedimiento'] = procedimientoTraductions?.isEmpty ?? true
+    //         ? {} : procedimientoTraductions;
+    //}
+
+    if (documentosRequeridosTraductions != null &&
+        documentosRequeridosTraductions!.isNotEmpty) {
+      // Cast explicite pour rester dans Map<String, String>
+      json['documentos_requeridos'] =
+          Map<String, String>.from(documentosRequeridosTraductions!);
     }
 
-    if (procedimientoTraductions != null) {
-      json['procedimiento'] = procedimientoTraductions;
+    if (procedimientoTraductions != null &&
+        procedimientoTraductions!.isNotEmpty) {
+      json['procedimiento'] =
+          Map<String, String>.from(procedimientoTraductions!);
     }
 
     return json;

@@ -21,7 +21,7 @@ class ConceptoDao {
   final List<String> _supportedLanguages = DatabaseSchema.supportedLanguages;
 
   /// Langue par défaut
-  final String _defaultLanguage = DatabaseSchema.defaultLanguage;
+  ///final String _defaultLanguage = DatabaseSchema.defaultLanguage;
 
   /// Insère un nouveau concept dans la base de données.
   ///

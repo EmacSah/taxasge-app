@@ -23,7 +23,6 @@ class SubCategoria {
   });
 
   /// Retourne le nom dans la langue spécifiée
-  /// Si le nom est null ou si la langue n'est pas disponible, retourne null
   String? getNombre(String langCode) {
     if (nombreTraductions == null || nombreTraductions!.isEmpty) {
       return null;
@@ -50,11 +49,7 @@ class SubCategoria {
   }
 
   /// Crée une instance de SubCategoria à partir d'une Map.
-  ///
-  /// Cette méthode est utilisée pour convertir les données de la base de données
-  /// en objet SubCategoria.
   factory SubCategoria.fromMap(Map<String, dynamic> map) {
-    // Traiter les traductions du nom
     Map<String, String>? nombreTraductions;
 
     if (map['nombre_es'] != null ||
@@ -62,25 +57,27 @@ class SubCategoria {
         map['nombre_en'] != null) {
       nombreTraductions = {};
 
-      if (map['nombre_es'] != null) nombreTraductions['es'] = map['nombre_es'];
-      if (map['nombre_fr'] != null) nombreTraductions['fr'] = map['nombre_fr'];
-      if (map['nombre_en'] != null) nombreTraductions['en'] = map['nombre_en'];
+      if (map['nombre_es'] != null) {
+        nombreTraductions['es'] = map['nombre_es'] as String;
+      }
+      if (map['nombre_fr'] != null) {
+        nombreTraductions['fr'] = map['nombre_fr'] as String;
+      }
+      if (map['nombre_en'] != null) {
+        nombreTraductions['en'] = map['nombre_en'] as String;
+      }
     } else if (map['nombre'] != null) {
-      // Si aucune traduction trouvée mais nom présent, utiliser comme valeur espagnole
-      nombreTraductions = {'es': map['nombre']};
+      nombreTraductions = {'es': map['nombre'] as String};
     }
 
     return SubCategoria(
-      id: map['id'],
-      categoriaId: map['categoria_id'],
+      id: map['id'] as String,
+      categoriaId: map['categoria_id'] as String,
       nombreTraductions: nombreTraductions,
     );
   }
 
   /// Crée une instance de SubCategoria à partir d'un JSON.
-  ///
-  /// Cette méthode est utilisée pour convertir les données JSON
-  /// en objet SubCategoria avec support du format multilingue.
   factory SubCategoria.fromJson(Map<String, dynamic> json) {
     Map<String, String>? nombreTraductions;
     var nombreData = json['nombre'];
@@ -89,12 +86,10 @@ class SubCategoria {
       nombreTraductions = {};
 
       if (nombreData is String) {
-        // Ancien format (chaîne simple) - considéré comme espagnol
         if (nombreData.isNotEmpty) {
           nombreTraductions['es'] = nombreData;
         }
-      } else if (nombreData is Map) {
-        // Nouveau format (objet de traduction)
+      } else if (nombreData is Map<String, dynamic>) {
         nombreData.forEach((key, value) {
           if (value is String && value.isNotEmpty) {
             nombreTraductions![key] = value;
@@ -102,64 +97,56 @@ class SubCategoria {
         });
       }
 
-      // Si aucune traduction n'a été ajoutée, mettre à null
       if (nombreTraductions.isEmpty) {
         nombreTraductions = null;
       }
     }
 
     return SubCategoria(
-      id: json['id'],
-      categoriaId: json['categoria_id'] ?? '',
+      id: json['id'] as String,
+      categoriaId: (json['categoria_id'] as String?) ?? '',
       nombreTraductions: nombreTraductions,
     );
   }
 
   /// Convertit cette instance en Map.
-  ///
-  /// Cette méthode est utilisée pour préparer l'objet à être stocké
-  /// dans la base de données.
   Map<String, dynamic> toMap() {
     final map = {
       'id': id,
       'categoria_id': categoriaId,
     };
 
-    // Ajouter les traductions du nom si présentes
     if (nombreTraductions != null) {
-      nombreTraductions!.forEach((langCode, value) {
-        map['nombre_$langCode'] = value;
-      });
+      for (var entry in nombreTraductions!.entries) {
+        map['nombre_${entry.key}'] = entry.value;
+      }
 
-      // Compatibilité avec l'ancien format
-      map['nombre'] = nombre;
-    } else {
-      map['nombre'] = null;
+      map['nombre'] = getNombre(langueParDefaut) ?? '';
     }
 
     return map;
   }
 
-  /// Convertit cette instance en Map JSON avec support multilingue.
-  ///
-  /// Cette méthode est utilisée pour sérialiser l'objet en JSON.
+  /// Convertit cette instance en Map JSON.
   Map<String, dynamic> toJson() {
-    final json = {
+    final Map<String, dynamic> json = {
       'id': id,
       'categoria_id': categoriaId,
     };
 
     if (nombreTraductions != null) {
-      json['nombre'] = nombreTraductions;
+      json['nombre'] = nombreTraductions!.length == 1 &&
+              nombreTraductions!.containsKey('es')
+          ? nombreTraductions![
+              'es'] // Si une seule traduction en espagnol, on renvoie la string
+          : Map<String, String>.from(
+              nombreTraductions!); // Sinon on renvoie la map complète
     }
 
     return json;
   }
 
-  /// Crée une copie de cette instance avec les champs spécifiés remplacés.
-  ///
-  /// Cette méthode est utile pour créer une version modifiée d'un objet
-  /// sans altérer l'original.
+  /// Crée une copie avec des champs modifiés.
   SubCategoria copyWith({
     String? id,
     String? categoriaId,
@@ -168,35 +155,17 @@ class SubCategoria {
     return SubCategoria(
       id: id ?? this.id,
       categoriaId: categoriaId ?? this.categoriaId,
-      nombreTraductions: nombreTraductions ?? this.nombreTraductions,
+      nombreTraductions: nombreTraductions ??
+          (this.nombreTraductions != null
+              ? Map<String, String>.from(this.nombreTraductions!)
+              : null),
     );
-  }
-
-  /// Ajoute ou met à jour une traduction du nom
-  SubCategoria withNombreTraduction(String langCode, String value) {
-    final newTraductions = Map<String, String>.from(nombreTraductions ?? {});
-    newTraductions[langCode] = value;
-    return copyWith(nombreTraductions: newTraductions);
-  }
-
-  /// Supprime une traduction du nom
-  SubCategoria removeNombreTraduction(String langCode) {
-    if (nombreTraductions == null ||
-        !nombreTraductions!.containsKey(langCode)) {
-      return this;
-    }
-
-    final newTraductions = Map<String, String>.from(nombreTraductions!);
-    newTraductions.remove(langCode);
-
-    // Si toutes les traductions ont été supprimées, mettre à null
-    return copyWith(
-        nombreTraductions: newTraductions.isEmpty ? null : newTraductions);
   }
 
   @override
   String toString() {
-    return 'SubCategoria{id: $id, categoriaId: $categoriaId, nombreTraductions: $nombreTraductions}';
+    return 'SubCategoria{id: $id, categoriaId: $categoriaId, '
+        'nombreTraductions: $nombreTraductions}';
   }
 
   @override
@@ -206,25 +175,20 @@ class SubCategoria {
     return other is SubCategoria &&
         other.id == id &&
         other.categoriaId == categoriaId &&
-        _mapsEqual(other.nombreTraductions, nombreTraductions);
-  }
-
-  /// Utilitaire pour comparer deux maps
-  bool _mapsEqual(Map<String, String>? map1, Map<String, String>? map2) {
-    if (map1 == null && map2 == null) return true;
-    if (map1 == null || map2 == null) return false;
-    if (map1.length != map2.length) return false;
-
-    for (final key in map1.keys) {
-      if (!map2.containsKey(key) || map1[key] != map2[key]) {
-        return false;
-      }
-    }
-
-    return true;
+        mapsEqual(other.nombreTraductions, nombreTraductions);
   }
 
   @override
   int get hashCode =>
       id.hashCode ^ categoriaId.hashCode ^ nombreTraductions.hashCode;
+
+  /// Utilitaire pour comparer deux maps
+  static bool mapsEqual(Map<String, String>? map1, Map<String, String>? map2) {
+    if (map1 == null && map2 == null) return true;
+    if (map1 == null || map2 == null) return false;
+    if (map1.length != map2.length) return false;
+
+    return map1.entries
+        .every((e) => map2.containsKey(e.key) && map2[e.key] == e.value);
+  }
 }

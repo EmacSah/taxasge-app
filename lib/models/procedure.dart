@@ -126,7 +126,7 @@ class Procedure {
     };
     
     if (orden != null) {
-      json['orden'] = orden;
+      json['orden'] = orden.toString();
     }
     
     return json;

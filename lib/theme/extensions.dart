@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import '../services/localization_service.dart';
+import '../database/schema.dart'; // Ajout de l'import pour DatabaseSchema
 
 /// Extensions pour simplifier l'accès au thème et aux fonctionnalités multilingues dans l'application TaxasGE
 extension ThemeExtension on BuildContext {
@@ -121,40 +122,62 @@ extension MultilingualStringExtension on String {
   }
 
   /// Adapte automatiquement le texte pour les écrans RTL en ajoutant des marqueurs Unicode
-  /// Cette méthode est utile pour garantir que le texte s'affiche correctement indépendamment de la direction
-  String adaptToRtl(bool isRtl) {
-    if (!isRtl) return this;
-    // Ajouter des marqueurs RLM (Right-to-Left Mark) autour des nombres et des caractères latins
-    // pour garantir qu'ils s'affichent correctement dans un contexte RTL
-    return replaceAllMapped(RegExp(r'[0-9a-zA-Z]+'), (match) {
-      return '\u200F${match.group(0)}\u200F';
-    });
-  }
+  //String adaptToRtl(bool isRtl) {
+  //  if (!isRtl) return this;
+  // Ajouter des marqueurs RLM (Right-to-Left Mark) autour des nombres et des caractères latins
+  //  return replaceAllMapped(RegExp(r'[0-9a-zA-Z]+'), (match) {
+  //    return '\u200F${match.group(0)}\u200F';
+  //  });
+  //}
 
   /// Vérifie si la chaîne contient des caractères RTL
-  bool get containsRtlCharacters {
-    // Gammes Unicode pour les langues RTL principales (arabe, hébreu, etc.)
-    final rtlRanges = [
-      RegExp(r'[\u0600-\u06FF]'), // Arabe
-      RegExp(r'[\u0750-\u077F]'), // Arabe supplément
-      RegExp(r'[\u08A0-\u08FF]'), // Arabe étendu-A
-      RegExp(r'[\uFB50-\uFDFF]'), // Arabe présenté-A
-      RegExp(r'[\uFE70-\uFEFF]'), // Arabe présenté-B
-      RegExp(r'[\u0590-\u05FF]'), // Hébreu
-      RegExp(r'[\u07C0-\u07FF]'), // NKo
-      RegExp(r'[\u0780-\u07BF]'), // Thaana
-    ];
+  //bool get containsRtlCharacters {
+  // Gammes Unicode pour les langues RTL principales (arabe, hébreu, etc.)
+  //  final rtlRanges = [
+  //    RegExp(r'[\u0600-\u06FF]'), // Arabe
+  //    RegExp(r'[\u0750-\u077F]'), // Arabe supplément
+  //    RegExp(r'[\u08A0-\u08FF]'), // Arabe étendu-A
+  //    RegExp(r'[\uFB50-\uFDFF]'), // Arabe présenté-A
+  //    RegExp(r'[\uFE70-\uFEFF]'), // Arabe présenté-B
+  //    RegExp(r'[\u0590-\u05FF]'), // Hébreu
+  //    RegExp(r'[\u07C0-\u07FF]'), // NKo
+  //    RegExp(r'[\u0780-\u07BF]'), // Thaana
+  //  ];
 
-    for (final range in rtlRanges) {
-      if (range.hasMatch(this)) return true;
-    }
+  //  for (final range in rtlRanges) {
 
-    return false;
-  }
+  //if (range.hasMatch(this)) return true;
+  //}
+
+  //return false;
+  //}
 }
 
 /// Extensions pour faciliter la gestion des maps de traductions
 extension TranslationMapExtension on Map<String, String>? {
+  /// Obtient la traduction pour une langue spécifiée
+  String getTranslation(String langCode, {String? fallbackLang}) {
+    if (this == null || this!.isEmpty) return '';
+
+    // Essayer la langue demandée
+    if (hasTranslation(langCode)) return this![langCode]!;
+
+    // Essayer la langue de secours si spécifiée
+    if (fallbackLang != null && hasTranslation(fallbackLang)) {
+      return this![fallbackLang]!;
+    }
+
+    // Essayer la langue par défaut
+    final defaultLang = DatabaseSchema.defaultLanguage;
+    if (hasTranslation(defaultLang)) return this![defaultLang]!;
+
+    // Prendre la première traduction disponible
+    return this!
+        .entries
+        .firstWhere((e) => e.value.isNotEmpty, orElse: () => MapEntry('', ''))
+        .value;
+  }
+
   /// Vérifie si la map contient une traduction pour la langue spécifiée
   bool hasTranslation(String langCode) {
     if (this == null) return false;
@@ -169,28 +192,4 @@ extension TranslationMapExtension on Map<String, String>? {
 
   /// Vérifie si la map a au moins une traduction
   bool get hasAnyTranslation => translationCount > 0;
-
-  /// Obtient la traduction pour une langue spécifiée ou une langue de secours
-  String getTranslation(String langCode, {String? fallbackLang}) {
-    if (this == null || this!.isEmpty) return '';
-
-    // Essayer la langue demandée
-    if (hasTranslation(langCode)) return this![langCode]!;
-
-    // Essayer la langue de secours si spécifiée
-    if (fallbackLang != null && hasTranslation(fallbackLang)) {
-      return this![fallbackLang]!;
-    }
-
-    // Essayer la langue par défaut
-    final defaultLang = LocalizationService.instance.defaultLanguage;
-    if (hasTranslation(defaultLang)) return this![defaultLang]!;
-
-    // Prendre la première traduction disponible
-    final firstAvailable = this!
-        .entries
-        .firstWhere((e) => e.value.isNotEmpty, orElse: () => MapEntry('', ''));
-
-    return firstAvailable.value;
-  }
 }

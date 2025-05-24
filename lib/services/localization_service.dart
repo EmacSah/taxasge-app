@@ -1,9 +1,12 @@
 // lib/services/localization_service.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
+//import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../database/schema.dart';
 import '../database/database_service.dart';
+import 'dart:ui' as ui;
+//import 'package:flutter/material.dart' show TextDirection;
 
 /// Service qui gère les préférences linguistiques et l'accès aux traductions.
 ///
@@ -260,7 +263,7 @@ class LocalizationService extends ChangeNotifier {
 
   /// Obtient la direction du texte pour la langue actuelle
   TextDirection get textDirection =>
-      isRtl(_currentLanguage) ? TextDirection.rtl : TextDirection.ltr;
+      isRtl(_currentLanguage) ? ui.TextDirection.rtl : ui.TextDirection.ltr;
 
   /// Réinitialise les préférences de langue
   Future<void> resetToDefaults() async {
