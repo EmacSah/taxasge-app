@@ -16,78 +16,7 @@ class TestConfig {
   static DatabaseService? _databaseService;
   static bool _isInitialized = false;
 
-  /// Données de test JSON par défaut
-  static const String defaultTestDataJson = '''
-  [
-    {
-      "id": "M-TEST-001",
-      "nombre": {
-        "es": "MINISTERIO DE PRUEBA",
-        "fr": "MINISTÈRE DE TEST", 
-        "en": "TEST MINISTRY"
-      },
-      "sectores": [
-        {
-          "id": "S-TEST-001",
-          "nombre": {
-            "es": "SECTOR DE PRUEBA",
-            "fr": "SECTEUR DE TEST",
-            "en": "TEST SECTOR"
-          },
-          "categorias": [
-            {
-              "id": "C-TEST-001", 
-              "nombre": {
-                "es": "CATEGORÍA DE PRUEBA",
-                "fr": "CATÉGORIE DE TEST",
-                "en": "TEST CATEGORY"
-              },
-              "sub_categorias": [
-                {
-                  "id": "SC-TEST-001",
-                  "nombre": {
-                    "es": "SUBCATEGORÍA DE PRUEBA", 
-                    "fr": "SOUS-CATÉGORIE DE TEST",
-                    "en": "TEST SUBCATEGORY"
-                  },
-                  "conceptos": [
-                    {
-                      "id": "T-TEST-001",
-                      "nombre": {
-                        "es": "CONCEPTO DE PRUEBA",
-                        "fr": "CONCEPT DE TEST", 
-                        "en": "TEST CONCEPT"
-                      },
-                      "tasa_expedicion": "1000",
-                      "tasa_renovacion": "500",
-                      "documentos_requeridos": {
-                        "es": "Documento de identidad\\nFormulario de solicitud",
-                        "fr": "Pièce d'identité\\nFormulaire de demande", 
-                        "en": "Identity document\\nApplication form"
-                      },
-                      "procedimiento": {
-                        "es": "Presentar la solicitud\\nPagar la tasa",
-                        "fr": "Présenter la demande\\nPayer les frais",
-                        "en": "Submit the application\\nPay the fee"
-                      },
-                      "palabras_clave": {
-                        "es": "prueba,test,ejemplo",
-                        "fr": "test,essai,exemple",
-                        "en": "test,trial,example"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
-  ''';
-
-  /// Initialise l'environnement de test global
+   /// Initialise l'environnement de test global
   ///
   /// Cette méthode doit être appelée avant tous les tests qui nécessitent
   /// une base de données ou des services Flutter.
@@ -119,11 +48,10 @@ class TestConfig {
           final String assetPath = methodCall.arguments.toString();
 
           // Mock pour le fichier de taxes de test
-          if (assetPath.contains('test_taxes.json') ||
-              assetPath.contains('taxes.json')) {
-            return Uint8List.fromList(utf8.encode(defaultTestDataJson))
-                .buffer
-                .asByteData();
+          if (assetPath.contains('test_taxes.json')) {
+              final file = File('test/test_assets/test_taxes.json');
+              final content = await file.readAsString();
+              return Uint8List.fromList(utf8.encode(content)).buffer.asByteData();
           }
 
           // Mock pour d'autres assets si nécessaire
@@ -158,7 +86,8 @@ class TestConfig {
 
     await _databaseService!.initialize(
       forceReset: forceReset,
-      testJsonString: testData ?? defaultTestDataJson,
+      testJsonString: testData,
+      //testJsonString: testData ?? defaultTestDataJson,
     );
 
     return _databaseService!;
@@ -218,7 +147,7 @@ class TestConfig {
   }) {
     // Cette méthode pourrait être étoffée pour générer des données
     // de test plus complexes selon les besoins
-    return defaultTestDataJson;
+    return '[]';
   }
 
   /// Vérifie que l'environnement de test est correctement configuré
