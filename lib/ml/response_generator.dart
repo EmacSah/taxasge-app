@@ -219,7 +219,7 @@ class ResponseGenerator {
   }
 
   /// Combine plusieurs réponses en une seule réponse cohérente
-  String _combineResponses(List<String> responses) {
+  /*String _combineResponses(List<String> responses) {
     if (responses.isEmpty) return '';
     if (responses.length == 1) return responses[0];
 
@@ -231,10 +231,10 @@ class ResponseGenerator {
             : ' y ';
 
     return responses.join('. ').replaceAll('. .', '.');
-  }
+  }*/
 
   /// Ajoute une suggestion de suivi à la réponse si approprié
-  String _addFollowUp(String response, String intent, String language) {
+  /*String _addFollowUp(String response, String intent, String language) {
     final followUps = {
       'prix': {
         'es': '¿Necesitas información sobre los documentos requeridos?',
@@ -260,5 +260,5 @@ class ResponseGenerator {
     }
 
     return response;
-  }
+  }*/
 }

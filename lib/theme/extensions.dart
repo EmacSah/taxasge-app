@@ -86,14 +86,10 @@ extension MinistryColorExtension on String {
   }
 
   /// Obtient une version plus claire de la couleur du ministère
-  Color getLightMinistryColor() {
-    final color = AppTheme.getMinistryColor(this);
-    return Color.fromARGB(
-      40, // Faible opacité
-      color.red,
-      color.green,
-      color.blue,
-    );
+  Color getLightMinistryColor([double opacity = 0.15]) {
+    final baseColor = AppTheme.getMinistryColor(this);
+    final alpha = (opacity.clamp(0.0, 1.0) * 255).toDouble();
+    return baseColor.withValues(alpha: alpha);
   }
 
   /// Obtient une couleur de texte appropriée (blanc ou noir) selon la couleur du ministère
