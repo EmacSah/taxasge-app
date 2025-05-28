@@ -1,59 +1,149 @@
 [
   {
-    "id": "M-001",
+    "id": "M-TEST-001",
     "nombre": {
-      "es": "MINISTERIO TEST",
-      "fr": "MINISTÈRE TEST",
+      "es": "MINISTERIO DE PRUEBA",
+      "fr": "MINISTÈRE DE TEST",
       "en": "TEST MINISTRY"
     },
     "sectores": [
       {
-        "id": "S-001",
+        "id": "S-TEST-001",
         "nombre": {
-          "es": "SECTOR TEST",
-          "fr": "SECTEUR TEST",
+          "es": "SECTOR DE PRUEBA",
+          "fr": "SECTEUR DE TEST",
           "en": "TEST SECTOR"
         },
         "categorias": [
           {
-            "id": "C-001",
+            "id": "C-TEST-001",
             "nombre": {
-              "es": "CATEGORÍA TEST",
-              "fr": "CATÉGORIE TEST",
+              "es": "CATEGORIA DE PRUEBA",
+              "fr": "CATÉGORIE DE TEST",
               "en": "TEST CATEGORY"
             },
             "sub_categorias": [
               {
-                "id": "SC-001",
+                "id": "SC-TEST-001",
                 "nombre": {
-                  "es": "SUBCATEGORÍA TEST",
-                  "fr": "SOUS-CATÉGORIE TEST",
+                  "es": "SUBCATEGORIA DE PRUEBA",
+                  "fr": "SOUS-CATÉGORIE DE TEST",
                   "en": "TEST SUBCATEGORY"
                 },
                 "conceptos": [
                   {
-                    "id": "T-001",
+                    "id": "T-TEST-001",
                     "nombre": {
-                      "es": "IMPUESTO TEST",
-                      "fr": "TAXE TEST",
-                      "en": "TEST TAX"
+                      "es": "CONCEPTO DE PRUEBA",
+                      "fr": "CONCEPT DE TEST",
+                      "en": "TEST CONCEPT"
                     },
                     "tasa_expedicion": "1000",
                     "tasa_renovacion": "500",
                     "documentos_requeridos": {
-                      "es": "Copia del pasaporte vigente\nFoto tamaño carnet (formato JPG o PNG)",
-                      "fr": "Copie du passeport en cours de validité\nPhoto d'identité (format JPG ou PNG)",
-                      "en": "Copy of a valid passport\nPassport-size photo (JPG or PNG)"
+                      "es": "Copia del documento de identidad\nFotocopia del pasaporte vigente",
+                      "fr": "Copie de la pièce d'identité\nPhotocopie du passeport en cours de validité",
+                      "en": "Copy of identity document\nPhotocopy of valid passport"
                     },
                     "procedimiento": {
-                      "es": "Paso 1 : Rellenar el formulario de solicitud.\nPaso 2 : Pagar la tasa correspondiente.",
-                      "fr": "Étape 1 : Remplir le formulaire de demande.\nÉtape 2 : Régler la taxe correspondante.",
-                      "en": "Step 1: Fill in the application form.\nStep 2: Pay the applicable fee"
+                      "es": "Paso 1: Llenar el formulario de solicitud\nPaso 2: Presentar documentos requeridos\nPaso 3: Pagar las tasas correspondientes",
+                      "fr": "Étape 1: Remplir le formulaire de demande\nÉtape 2: Présenter les documents requis\nÉtape 3: Payer les taxes correspondantes",
+                      "en": "Step 1: Fill out the application form\nStep 2: Submit required documents\nStep 3: Pay the corresponding fees"
                     },
                     "palabras_clave": {
-                      "es": "prueba, impuesto, ejemplo",
-                      "fr": "test, taxe, exemple",
-                      "en": "test, tax, example"
+                      "es": "prueba, test, ejemplo, muestra",
+                      "fr": "test, exemple, essai, échantillon",
+                      "en": "test, example, sample, specimen"
+                    }
+                  },
+                  {
+                    "id": "T-TEST-002",
+                    "nombre": {
+                      "es": "SEGUNDO CONCEPTO DE PRUEBA",
+                      "fr": "DEUXIÈME CONCEPT DE TEST",
+                      "en": "SECOND TEST CONCEPT"
+                    },
+                    "tasa_expedicion": "2000",
+                    "tasa_renovacion": "1000",
+                    "documentos_requeridos": {
+                      "es": "Certificado médico\nComprobante de domicilio",
+                      "fr": "Certificat médical\nJustificatif de domicile",
+                      "en": "Medical certificate\nProof of residence"
+                    },
+                    "procedimiento": {
+                      "es": "Paso 1: Solicitar cita previa\nPaso 2: Acudir con documentación\nPaso 3: Realizar pago",
+                      "fr": "Étape 1: Demander un rendez-vous\nÉtape 2: Se présenter avec la documentation\nÉtape 3: Effectuer le paiement",
+                      "en": "Step 1: Request an appointment\nStep 2: Attend with documentation\nStep 3: Make payment"
+                    },
+                    "palabras_clave": {
+                      "es": "segundo, adicional, extra",
+                      "fr": "deuxième, additionnel, extra",
+                      "en": "second, additional, extra"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "M-TEST-002",
+    "nombre": {
+      "es": "MINISTERIO DE ECONOMIA",
+      "fr": "MINISTÈRE DE L'ÉCONOMIE",
+      "en": "MINISTRY OF ECONOMY"
+    },
+    "sectores": [
+      {
+        "id": "S-TEST-002",
+        "nombre": {
+          "es": "SECTOR FINANCIERO",
+          "fr": "SECTEUR FINANCIER",
+          "en": "FINANCIAL SECTOR"
+        },
+        "categorias": [
+          {
+            "id": "C-TEST-002",
+            "nombre": {
+              "es": "LICENCIAS COMERCIALES",
+              "fr": "LICENCES COMMERCIALES",
+              "en": "COMMERCIAL LICENSES"
+            },
+            "sub_categorias": [
+              {
+                "id": "SC-TEST-002",
+                "nombre": {
+                  "es": "LICENCIAS DE IMPORTACION",
+                  "fr": "LICENCES D'IMPORTATION",
+                  "en": "IMPORT LICENSES"
+                },
+                "conceptos": [
+                  {
+                    "id": "T-TEST-003",
+                    "nombre": {
+                      "es": "LICENCIA DE IMPORTACION GENERAL",
+                      "fr": "LICENCE D'IMPORTATION GÉNÉRALE",
+                      "en": "GENERAL IMPORT LICENSE"
+                    },
+                    "tasa_expedicion": "5000",
+                    "tasa_renovacion": "2500",
+                    "documentos_requeridos": {
+                      "es": "Registro mercantil\nDeclaración de impuestos\nCertificado de no deudor",
+                      "fr": "Registre du commerce\nDéclaration d'impôts\nCertificat de non-débiteur",
+                      "en": "Commercial registry\nTax declaration\nNon-debtor certificate"
+                    },
+                    "procedimiento": {
+                      "es": "Paso 1: Presentar solicitud\nPaso 2: Evaluación técnica\nPaso 3: Pago de tasas\nPaso 4: Emisión de licencia",
+                      "fr": "Étape 1: Soumettre la demande\nÉtape 2: Évaluation technique\nÉtape 3: Paiement des taxes\nÉtape 4: Émission de la licence",
+                      "en": "Step 1: Submit application\nStep 2: Technical evaluation\nStep 3: Fee payment\nStep 4: License issuance"
+                    },
+                    "palabras_clave": {
+                      "es": "importacion, comercio, licencia, mercantil",
+                      "fr": "importation, commerce, licence, commercial",
+                      "en": "import, trade, license, commercial"
                     }
                   }
                 ]

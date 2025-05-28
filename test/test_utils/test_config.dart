@@ -1,6 +1,5 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter/services.dart';
-//import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/database/database_service.dart';
 import 'dart:io';
@@ -16,7 +15,76 @@ class TestConfig {
   static DatabaseService? _databaseService;
   static bool _isInitialized = false;
 
-   /// Initialise l'environnement de test global
+  /// Données de test par défaut
+  static const String defaultTestDataJson = '''[
+  {
+    "id": "M-TEST-001",
+    "nombre": {
+      "es": "MINISTERIO DE PRUEBA",
+      "fr": "MINISTÈRE DE TEST",
+      "en": "TEST MINISTRY"
+    },
+    "sectores": [
+      {
+        "id": "S-TEST-001",
+        "nombre": {
+          "es": "SECTOR DE PRUEBA",
+          "fr": "SECTEUR DE TEST",
+          "en": "TEST SECTOR"
+        },
+        "categorias": [
+          {
+            "id": "C-TEST-001",
+            "nombre": {
+              "es": "CATEGORIA DE PRUEBA",
+              "fr": "CATÉGORIE DE TEST",
+              "en": "TEST CATEGORY"
+            },
+            "sub_categorias": [
+              {
+                "id": "SC-TEST-001",
+                "nombre": {
+                  "es": "SUBCATEGORIA DE PRUEBA",
+                  "fr": "SOUS-CATÉGORIE DE TEST",
+                  "en": "TEST SUBCATEGORY"
+                },
+                "conceptos": [
+                  {
+                    "id": "T-TEST-001",
+                    "nombre": {
+                      "es": "CONCEPTO DE PRUEBA",
+                      "fr": "CONCEPT DE TEST",
+                      "en": "TEST CONCEPT"
+                    },
+                    "tasa_expedicion": "1000",
+                    "tasa_renovacion": "500",
+                    "documentos_requeridos": {
+                      "es": "Documento 1\\nDocumento 2",
+                      "fr": "Document 1\\nDocument 2",
+                      "en": "Document 1\\nDocument 2"
+                    },
+                    "procedimiento": {
+                      "es": "Paso 1: Llenar formulario\\nPaso 2: Pagar tasa",
+                      "fr": "Étape 1: Remplir formulaire\\nÉtape 2: Payer taxe",
+                      "en": "Step 1: Fill form\\nStep 2: Pay fee"
+                    },
+                    "palabras_clave": {
+                      "es": "prueba, test, ejemplo",
+                      "fr": "test, exemple, essai",
+                      "en": "test, example, sample"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]''';
+
+  /// Initialise l'environnement de test global
   ///
   /// Cette méthode doit être appelée avant tous les tests qui nécessitent
   /// une base de données ou des services Flutter.
@@ -48,16 +116,59 @@ class TestConfig {
           final String assetPath = methodCall.arguments.toString();
 
           // Mock pour le fichier de taxes de test
-          if (assetPath.contains('test_taxes.json')) {
+          if (assetPath.contains('test_taxes.json') ||
+              assetPath.contains('taxes.json')) {
+            try {
+              // Essayer de charger le fichier réel d'abord
               final file = File('test/test_assets/test_taxes.json');
-              final content = await file.readAsString();
-              return Uint8List.fromList(utf8.encode(content)).buffer.asByteData();
+              if (await file.exists()) {
+                final content = await file.readAsString();
+                return Uint8List.fromList(utf8.encode(content))
+                    .buffer
+                    .asByteData();
+              }
+            } catch (e) {
+              // Utiliser les données par défaut si le fichier n'existe pas
+            }
+
+            // Fallback sur les données par défaut
+            return Uint8List.fromList(utf8.encode(defaultTestDataJson))
+                .buffer
+                .asByteData();
           }
 
-          // Mock pour d'autres assets si nécessaire
+          // Mock pour les modèles ML
           if (assetPath.contains('taxasge_model.tflite')) {
-            // Retourne un fichier vide pour les tests
-            return Uint8List(0).buffer.asByteData();
+            // Retourne un modèle vide pour les tests
+            return Uint8List(1024).buffer.asByteData();
+          }
+
+          // Mock pour les tokenizers
+          if (assetPath.contains('tokenizer.json')) {
+            const mockTokenizer = '''
+            {
+              "config": {
+                "word_index": {
+                  "<OOV>": 1,
+                  "cuanto": 2,
+                  "cuesta": 3,
+                  "pasaporte": 4,
+                  "precio": 5,
+                  "documentos": 6,
+                  "procedimiento": 7,
+                  "ministerio": 8
+                }
+              }
+            }
+            ''';
+            return Uint8List.fromList(utf8.encode(mockTokenizer))
+                .buffer
+                .asByteData();
+          }
+
+          // Mock pour autres assets
+          if (assetPath.contains('.json')) {
+            return Uint8List.fromList(utf8.encode('{}')).buffer.asByteData();
           }
         }
         return null;
@@ -77,18 +188,35 @@ class TestConfig {
 
     // Supprime l'ancienne instance si elle existe
     if (_databaseService != null) {
-      await _databaseService!.close();
+      try {
+        await _databaseService!.close();
+      } catch (e) {
+        // Ignore les erreurs de fermeture
+      }
       _databaseService = null;
     }
 
     // Crée une nouvelle instance du service
     _databaseService = DatabaseService();
 
-    await _databaseService!.initialize(
-      forceReset: forceReset,
-      testJsonString: testData,
-      //testJsonString: testData ?? defaultTestDataJson,
-    );
+    try {
+      await _databaseService!.initialize(
+        forceReset: forceReset,
+        seedData: true,
+        testJsonString: testData ?? defaultTestDataJson,
+      );
+    } catch (e) {
+      // En cas d'erreur, réessayer avec les données par défaut
+      try {
+        await _databaseService!.initialize(
+          forceReset: true,
+          seedData: true,
+          testJsonString: defaultTestDataJson,
+        );
+      } catch (e2) {
+        throw Exception('Failed to initialize test database: $e2');
+      }
+    }
 
     return _databaseService!;
   }
@@ -119,12 +247,20 @@ class TestConfig {
   /// Nettoie toutes les ressources de test
   static Future<void> cleanup() async {
     if (_databaseService != null) {
-      await _databaseService!.close();
+      try {
+        await _databaseService!.close();
+      } catch (e) {
+        // Ignore les erreurs de fermeture
+      }
       _databaseService = null;
     }
 
     if (_db != null) {
-      await _db!.close();
+      try {
+        await _db!.close();
+      } catch (e) {
+        // Ignore les erreurs de fermeture
+      }
       _db = null;
     }
 
@@ -144,10 +280,72 @@ class TestConfig {
     required String ministerioId,
     required String ministerioName,
     int conceptCount = 1,
+    Map<String, String>? translations,
   }) {
-    // Cette méthode pourrait être étoffée pour générer des données
-    // de test plus complexes selon les besoins
-    return '[]';
+    final ministerioNames = translations ??
+        {
+          'es': ministerioName,
+          'fr': ministerioName,
+          'en': ministerioName,
+        };
+
+    final List<Map<String, dynamic>> conceptos = [];
+
+    for (int i = 1; i <= conceptCount; i++) {
+      conceptos.add({
+        'id': 'T-$ministerioId-${i.toString().padLeft(3, '0')}',
+        'nombre': {
+          'es': 'Concepto $i de $ministerioName',
+          'fr': 'Concept $i de ${ministerioNames['fr']}',
+          'en': 'Concept $i of ${ministerioNames['en']}',
+        },
+        'tasa_expedicion': '${1000 * i}',
+        'tasa_renovacion': '${500 * i}',
+        'documentos_requeridos': {
+          'es': 'Documento ${i}a\\nDocumento ${i}b',
+          'fr': 'Document ${i}a\\nDocument ${i}b',
+          'en': 'Document ${i}a\\nDocument ${i}b',
+        },
+        'procedimiento': {
+          'es': 'Paso 1: Proceso $i\\nPaso 2: Finalizar',
+          'fr': 'Étape 1: Processus $i\\nÉtape 2: Finaliser',
+          'en': 'Step 1: Process $i\\nStep 2: Finalize',
+        },
+        'palabras_clave': {
+          'es': 'concepto$i, test, $ministerioName',
+          'fr': 'concept$i, test, ${ministerioNames['fr']}',
+          'en': 'concept$i, test, ${ministerioNames['en']}',
+        }
+      });
+    }
+
+    final ministerioData = [
+      {
+        'id': ministerioId,
+        'nombre': ministerioNames,
+        'sectores': [
+          {
+            'id': 'S-$ministerioId-001',
+            'nombre': ministerioNames,
+            'categorias': [
+              {
+                'id': 'C-$ministerioId-001',
+                'nombre': ministerioNames,
+                'sub_categorias': [
+                  {
+                    'id': 'SC-$ministerioId-001',
+                    'nombre': ministerioNames,
+                    'conceptos': conceptos,
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    return jsonEncode(ministerioData);
   }
 
   /// Vérifie que l'environnement de test est correctement configuré
@@ -173,5 +371,29 @@ class TestConfig {
   static String generateTestId(String prefix) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     return '$prefix-TEST-$timestamp';
+  }
+
+  /// Vérifie la santé de la base de données de test
+  static Future<bool> isHealthy() async {
+    try {
+      if (_databaseService == null) return false;
+
+      final count = await _databaseService!.ministerioDao.count();
+      return count > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Réinitialise la base de données avec des données fraîches
+  static Future<void> resetDatabase() async {
+    if (_databaseService != null) {
+      await _databaseService!.clearAllData();
+      await _databaseService!.initialize(
+        forceReset: true,
+        seedData: true,
+        testJsonString: defaultTestDataJson,
+      );
+    }
   }
 }

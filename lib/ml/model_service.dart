@@ -44,6 +44,8 @@ class ModelService {
   /// Vérifie si le service est initialisé
   bool get isInitialized => _isInitialized;
 
+
+
   /// Initialise le service en chargeant les modèles et tokenizers
   Future<void> initialize() async {
     if (_isInitialized) {
