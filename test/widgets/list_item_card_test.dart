@@ -13,13 +13,13 @@ class ListItemCard extends StatelessWidget {
   final Color? iconColor;
 
   const ListItemCard({
-    Key? key,
+    super.key,
     required this.title,
     this.subtitle,
     required this.onTap,
     this.leadingIcon,
     this.iconColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

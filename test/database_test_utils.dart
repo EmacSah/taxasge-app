@@ -1,101 +1,99 @@
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+// import 'dart:convert'; // Pour utf8 - Non utilisé
+import 'dart:io'; // Pour File
+import 'dart:typed_data'; // Endian, ByteData
+import 'package:flutter/services.dart'; // Pour MethodChannel, ByteData, Uint8List
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:taxasge/database/database_service.dart';
-import 'package:taxasge/database/schema.dart'; // Assure-toi que ce chemin est correct
+// import 'package:taxasge/database/schema.dart'; // Non utilisé ici
+import 'package:path/path.dart' as p; // Importer path pour join
 
-/// Initialise sqflite_common_ffi pour les tests sur desktop.
+// Initialise sqflite_common_ffi pour les tests sur desktop.
 void sqfliteTestInit() {
-  // Initialise FFI
   sqfliteFfiInit();
-  // Change la factory par défaut pour utiliser FFI
   databaseFactory = databaseFactoryFfi;
 }
 
-/// Fournit une instance de DatabaseService avec une base de données en mémoire pour les tests.
-/// La base de données est nettoyée avant chaque test.
-Future<DatabaseService> getTestDatabaseService({String? testJsonString, bool seedData = true}) async {
-  // Utilise une base de données en mémoire pour l'isolation des tests
-  final db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath, options: OpenDatabaseOptions(
-    version: DatabaseSchema.databaseVersion,
-    onCreate: (db, version) async {
-      await DatabaseSchema.createAllTables(db);
-    },
-    onUpgrade: (db, oldVersion, newVersion) async {
-      // Pour les tests, on pourrait simplement recréer, ou tester les migrations spécifiques
-      await DatabaseSchema.dropAllTables(db);
-      await DatabaseSchema.createAllTables(db);
-    },
-  ));
+// Fournit une instance de DatabaseService avec une base de données en mémoire pour les tests,
+// et charge les données depuis un fichier JSON de test spécifié.
+Future<DatabaseService> getTestDatabaseService({
+  String testJsonAssetPath =
+      'test/test_assets/test_taxes.json', // Chemin relatif à la racine du projet
+  bool seedData = true,
+}) async {
+  // Le mock pour rootBundle doit être configuré avant l'initialisation de DatabaseService
+  // si DatabaseService appelle rootBundle.loadString lors de son initialisation.
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+    const MethodChannel('flutter/assets'),
+    (MethodCall methodCall) async {
+      if (methodCall.method == 'loadString') {
+        final String? key = methodCall.arguments as String?;
+        // Si DatabaseService demande le fichier JSON de production, on lui donne celui de test.
+        if (key == 'assets/data/taxes.json' && testJsonAssetPath.isNotEmpty) {
+          try {
+            // Construire le chemin absolu basé sur le répertoire courant du projet
+            final projectRoot = Directory.current.path;
+            final absoluteTestJsonPath = p.join(projectRoot, testJsonAssetPath);
 
-  // Nettoyer toutes les tables avant chaque test pour assurer l'isolation
-  for (final tableName in DatabaseSchema.createTableStatements.map((s) => s.split(" ")[2]).toList().reversed) {
-      // Ceci est une simplification pour obtenir les noms de table, pourrait être amélioré
-      if (await db.query('sqlite_master', where: 'name = ?', whereArgs: [tableName]).then((value) => value.isNotEmpty)) {
-          await db.delete(tableName);
+            final file = File(absoluteTestJsonPath);
+            if (await file.exists()) {
+              // print('Mocking asset load: Reading from $absoluteTestJsonPath for $key'); // Nettoyé
+              return await file.readAsString(); // loadString attend une String
+            } else {
+              // print('Mock Asset Warning: Test JSON file $absoluteTestJsonPath not found for $key. Returning empty list.'); // Nettoyé
+              return '[]'; // Fallback JSON valide minimal pour éviter de planter
+            }
+          } catch (e) {
+            // print('Erreur de chargement du fichier JSON de test ($testJsonAssetPath) via mock pour $key: $e'); // Nettoyé
+            return '[]'; // Fallback
+          }
+        }
+        // Mocks pour les tokenizers (contenu JSON string simple)
+        // Ces mocks sont nécessaires car DatabaseService.initialize peut appeler ChatbotService.initialize
+        // qui à son tour appelle ModelService.initialize.
+        if ((key ?? "").contains('taxasge_model_question_tokenizer.json')) {
+          return '{"config": {"word_index": {"<OOV>": 1, "hola": 2, "precio":3, "de":4, "impuesto":5, "alpha":6, "test":7, "prueba":8 }, "oov_token":"<OOV>"}}';
+        }
+        if ((key ?? "").contains('taxasge_model_answer_tokenizer.json')) {
+          return '{"config": {"word_index": {"<OOV>": 1, "<START>":2, "<END>":3, "el":4, "costo":5, "es":6, "mil":7, "quinientos":8 }, "oov_token":"<OOV>"}}';
+        }
       }
-  }
-  
+      // Mock pour le modèle TFLite (ByteData)
+      if (methodCall.method == 'load') {
+        final String? key = methodCall.arguments as String?;
+        if (key == 'assets/ml/taxasge_model.tflite') {
+          // Simuler un fichier TFLite bidon avec l'en-tête si ModelService le lit
+          final ByteData header =
+              ByteData(256); // Assez grand pour éviter les erreurs de Range
+          header.setInt64(0, 128, Endian.little); // Dummy encoder size
+          header.setInt64(8, 128, Endian.little); // Dummy decoder size
+          for (int i = 16; i < header.lengthInBytes; i++) {
+            header.setUint8(i, 0);
+          }
+          return header.buffer.asByteData();
+        }
+      }
+      // Pour tout autre appel d'asset non mocké explicitement ici
+      // print('Mock Asset Warning: Unhandled asset call: ${methodCall.method} ${methodCall.arguments}'); // Nettoyé
+      return null;
+    },
+  );
+
   final dbService = DatabaseService();
-  // Simuler l'initialisation interne de DatabaseService avec la DB en mémoire
-  // Ceci est un hack car _db est privé. Idéalement, DatabaseService permettrait d'injecter une DB.
-  // Pour l'instant, on va supposer que DatabaseService().initialize() peut être appelé plusieurs fois 
-  // ou qu'on peut le modifier pour accepter une DB.
-  // Alternative: Utiliser une instance réelle mais la réinitialiser.
-  // Pour ce subtask, nous allons nous concentrer sur la structure. 
-  // Le DatabaseService sera initialisé avec des données de test dans les fichiers de test eux-mêmes.
-  
-  // Fermer la base de données ouverte pour la laisser être réouverte par initialize
-  await db.close();
+  // forceReset: true avec openDatabase(inMemoryDatabasePath) va créer une nouvelle DB en mémoire à chaque fois.
+  // seedData: true appellera _importInitialData qui utilisera le mock ci-dessus.
+  // testJsonString: null est crucial pour que DatabaseService utilise rootBundle.loadString('assets/data/taxes.json')
+  await dbService.initialize(forceReset: true, seedData: seedData);
 
+  // Nettoyer le mock après son utilisation par DatabaseService.initialize()
+  // pour ne pas affecter d'autres tests qui pourraient vouloir utiliser le vrai rootBundle
+  // ou un mock différent.
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('flutter/assets'), null);
 
-  // Initialiser le service avec la base de données en mémoire et potentiellement des données de test
-  // Note: The `inMemory: true` parameter was present in the previous version of this file from the subtask.
-  // The current subtask description for this file omits `inMemory: true` here. Adhering to current prompt.
-  await dbService.initialize(forceReset: true, seedData: seedData, testJsonString: testJsonString);
   return dbService;
 }
 
-// Un exemple de JSON de test minimal pour les tests d'importation
-const String minimalTestJson = '''
-[
-  {
-    "id": "M-TEST",
-    "nombre": {
-      "es": "MINISTERIO DE PRUEBA",
-      "fr": "MINISTÈRE DE TEST",
-      "en": "TEST MINISTRY"
-    },
-    "sectores": [
-      {
-        "id": "S-TEST",
-        "nombre": { "es": "SECTOR PRUEBA" },
-        "categorias": [
-          {
-            "id": "C-TEST",
-            "nombre": { "es": "CATEGORIA PRUEBA" },
-            "sub_categorias": [
-              {
-                "id": "SC-TEST",
-                "nombre": { "es": "SUBCATEGORIA PRUEBA" },
-                "conceptos": [
-                  {
-                    "id": "T-TEST",
-                    "nombre": { "es": "CONCEPTO DE PRUEBA" },
-                    "tasa_expedicion": "100",
-                    "tasa_renovacion": "50",
-                    "documentos_requeridos": { "es": "Doc1
-Doc2" },
-                    "procedimiento": { "es": "Proc1
-Proc2" },
-                    "palabras_clave": { "es": "test,prueba" }
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
-]
-''';
+// Le JSON minimal peut être conservé pour des tests très spécifiques si nécessaire,
+// mais getTestDatabaseService chargera test_taxes.json par défaut.

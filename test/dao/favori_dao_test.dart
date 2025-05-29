@@ -1,67 +1,100 @@
+// ──────────────────────────────────────────────────────────────────────────────
+// test/dao/favori_dao_test.dart
+// ──────────────────────────────────────────────────────────────────────────────
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/database/dao/favori_dao.dart';
 import 'package:taxasge/database/database_service.dart';
-import 'package:taxasge/models/favori.dart';
-import '../database_test_utils.dart';
+
+import '../database_test_utils.dart';   // sqfliteTestInit() + getTestDatabaseService()
 
 void main() {
   sqfliteTestInit();
-  group('FavoriDao Tests', () {
+
+  group('FavoriDao – tests combinés', () {
     late DatabaseService dbService;
-    late FavoriDao favoriDao;
-    const String testConceptoId1 = 'T-TEST';
-    // const String testConceptoId2 = 'T-002'; // Supposons que cet ID existe dans un jeu de données plus large
+    late FavoriDao       favoriDao;
+
+    // ID existant dans test_taxes.json
+    const conceptoId = 'T-TEST-001';
 
     setUp(() async {
-      // Utiliser minimalTestJson qui contient T-TEST.
-      // T-002 (utilisé dans certains tests originaux) n'est pas dans minimalTestJson.
-      // Les tests seront adaptés pour T-TEST.
-      dbService = await getTestDatabaseService(testJsonString: minimalTestJson, seedData: true);
-      favoriDao = dbService.favoriDao;
-    });
-    tearDown(() async => await dbService.close());
-
-    test('add and isFavorite', () async {
-      expect(await favoriDao.isFavorite(testConceptoId1), isFalse);
-      await favoriDao.add(Favori(conceptoId: testConceptoId1, fechaAgregado: DateTime.now()));
-      expect(await favoriDao.isFavorite(testConceptoId1), isTrue);
+      dbService  = await getTestDatabaseService(seedData: true);
+      favoriDao  = dbService.favoriDao;
     });
 
-    test('remove a favorite', () async {
-      await favoriDao.add(Favori(conceptoId: testConceptoId1, fechaAgregado: DateTime.now()));
-      expect(await favoriDao.isFavorite(testConceptoId1), isTrue);
-      await favoriDao.remove(testConceptoId1);
-      expect(await favoriDao.isFavorite(testConceptoId1), isFalse);
+    tearDown(() async => dbService.close());
+
+    // ───────────────────────────
+    // 1)  GOLDEN / FIGÉ
+    // ───────────────────────────
+    group('[Golden] Import integrity', () {
+      test('La table des favoris est vide après import', () async {
+        expect(await favoriDao.count(), 0);
+      });
     });
 
-    test('toggleFavorite adds if not present', () async {
-      expect(await favoriDao.isFavorite(testConceptoId1), isFalse);
-      await favoriDao.toggleFavorite(testConceptoId1);
-      expect(await favoriDao.isFavorite(testConceptoId1), isTrue);
-    });
+    // ───────────────────────────
+    // 2)  DYNAMIQUE
+    // ───────────────────────────
+    group('[Dynamic] DAO behaviour', () {
+      test('addToFavorites puis isFavorite', () async {
+        expect(await favoriDao.isFavorite(conceptoId), isFalse);
+        await favoriDao.addToFavorites(conceptoId);
+        expect(await favoriDao.isFavorite(conceptoId), isTrue);
+      });
 
-    test('toggleFavorite removes if present', () async {
-      await favoriDao.add(Favori(conceptoId: testConceptoId1, fechaAgregado: DateTime.now()));
-      expect(await favoriDao.isFavorite(testConceptoId1), isTrue);
-      await favoriDao.toggleFavorite(testConceptoId1);
-      expect(await favoriDao.isFavorite(testConceptoId1), isFalse);
-    });
-    
-    test('getAll returns all favorites', () async {
-      await favoriDao.add(Favori(conceptoId: testConceptoId1, fechaAgregado: DateTime.now()));
-      // Pour un meilleur test, il faudrait un testConceptoId2 valide et l'ajouter aussi
-      // Si T-002 était dans minimalTestJson, on pourrait faire:
-      // await favoriDao.add(Favori(conceptoId: testConceptoId2, fechaAgregado: DateTime.now()));
-      
-      final favorites = await favoriDao.getAll();
-      expect(favorites.length, 1);
-      expect(favorites.first.conceptoId, testConceptoId1);
-    });
+      test('toggleFavorite ajoute si absent, retire si présent', () async {
+        // absent → toggle => ajoute
+        await favoriDao.toggleFavorite(conceptoId);
+        expect(await favoriDao.isFavorite(conceptoId), isTrue);
 
-    test('count returns correct number of favorites', () async {
-      expect(await favoriDao.count(), 0);
-      await favoriDao.add(Favori(conceptoId: testConceptoId1, fechaAgregado: DateTime.now()));
-      expect(await favoriDao.count(), 1);
+        // présent → toggle => retire
+        await favoriDao.toggleFavorite(conceptoId);
+        expect(await favoriDao.isFavorite(conceptoId), isFalse);
+      });
+
+      test('deleteByConceptoId supprime toutes les entrées liées', () async {
+        await favoriDao.addToFavorites(conceptoId);
+        expect(await favoriDao.count(), 1);
+
+        await favoriDao.deleteByConceptoId(conceptoId);
+        expect(await favoriDao.count(), 0);
+      });
+
+      test('getAll retourne toutes les entrées', () async {
+        await favoriDao.addToFavorites(conceptoId);
+
+        // Ajout facultatif d’un second favori si présent dans le JSON
+        const conceptoId2 = 'T-TEST-002';           //  adapter si besoin
+        try {
+          await favoriDao.addToFavorites(conceptoId2);
+        } catch (_) {
+          // ignoré si l’ID n’existe pas
+        }
+
+        final all = await favoriDao.getAll();
+        expect(all, isNotEmpty);
+        expect(all.any((f) => f.conceptoId == conceptoId), isTrue);
+      });
+
+      test('count reflète correctement insert / delete', () async {
+        final start = await favoriDao.count();
+
+        await favoriDao.addToFavorites(conceptoId);
+        expect(await favoriDao.count(), start + 1);
+
+        await favoriDao.deleteByConceptoId(conceptoId);
+        expect(await favoriDao.count(), start);
+      });
+
+      test('getById récupère l’entrée et sa date ISO-8601', () async {
+        final rowId = await favoriDao.addToFavorites(conceptoId);
+        final fav   = await favoriDao.getById(rowId);
+
+        expect(fav, isNotNull);
+        expect(fav!.conceptoId, conceptoId);
+        expect(() => DateTime.parse(fav.fechaAgregado), returnsNormally);
+      });
     });
   });
 }

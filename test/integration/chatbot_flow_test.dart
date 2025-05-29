@@ -3,13 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:taxasge/main.dart' as app;
 import 'package:taxasge/screens/chatbot_screen.dart';
-import 'package:taxasge/widgets/chat/chat_input.dart';
+// import 'package:taxasge/widgets/chat/chat_input.dart'; // Non utilisé directement
 import 'package:taxasge/widgets/chat/message_bubble.dart';
-import 'package:taxasge/services/chatbot_service.dart'; // Pour vérifier les messages
-import 'package:provider/provider.dart'; // Pour accéder au service
+// import 'package:taxasge/services/chatbot_service.dart'; // Non utilisé directement
+// import 'package:provider/provider.dart'; // Non utilisé directement
 import 'package:flutter/services.dart'; // Pour MethodChannel
 import 'dart:io'; // Pour File
-import 'dart:convert'; // Pour utf8
+// import 'dart:convert'; // Pour utf8 - Non utilisé
 import 'dart:typed_data'; // Pour ByteData
 import '../database_test_utils.dart'; // Pour sqfliteTestInit
 import 'package:shared_preferences/shared_preferences.dart'; // Ajouté pour SharedPreferences
@@ -134,7 +134,7 @@ void main() {
       expect(botResponseBubble.chatMessage.text, isNotEmpty);
       // Pour un test plus précis, si vous connaissez la réponse attendue pour "Hola" avec le modèle mocké/réel:
       // expect(botResponseBubble.chatMessage.text, "Hola! ¿Cómo puedo ayudarte?"); // Ou réponse du vrai modèle
-      print("Réponse du bot observée: ${botResponseBubble.chatMessage.text}");
+      // print("Réponse du bot observée: ${botResponseBubble.chatMessage.text}"); // Nettoyé
 
       // Vérifier si des suggestions s'affichent (optionnel, dépend de la réponse)
       // expect(find.byType(ActionChip), findsWidgets);

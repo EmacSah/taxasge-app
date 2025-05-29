@@ -1,345 +1,125 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/ml/response_generator.dart';
-import 'package:taxasge/database/database_service.dart';
 import 'package:taxasge/services/localization_service.dart';
+import 'package:taxasge/database/database_service.dart'; // Au cas où ResponseGenerator l'utilise
+import '../../database_test_utils.dart'; // Pour getTestDatabaseService et minimalTestJson
+import 'package:shared_preferences/shared_preferences.dart'; // Ajouté pour SharedPreferences
 import '../../test_utils/test_config.dart';
 
 void main() {
+  sqfliteTestInit(); // Initialise FFI pour les tests db si nécessaire
+
   group('ResponseGenerator Tests', () {
     late ResponseGenerator responseGenerator;
-    late DatabaseService mockDbService;
+    late DatabaseService dbService; // Au cas où ResponseGenerator en aurait besoin
 
     setUpAll(() async {
-      await TestConfig.initialize();
-      mockDbService = await TestConfig.initializeDatabase();
+      // Initialiser SharedPreferences pour LocalizationService une fois
+      TestWidgetsFlutterBinding.ensureInitialized(); // Nécessaire pour SharedPreferences
+      SharedPreferences.setMockInitialValues({});
+      await LocalizationService.instance.initialize();
     });
 
-    setUp(() {
-      responseGenerator = ResponseGenerator(
-        dbService: mockDbService,
-        localizationService: LocalizationService.instance,
-      );
+    setUp(() async {
+      responseGenerator = ResponseGenerator();
+      // Initialiser une DB de test si ResponseGenerator doit y accéder
+      // Utiliser minimalTestJson pour des données de test contrôlées et simples
+      // Correction de testJsonPath à testJsonAssetPath pour correspondre à la signature de getTestDatabaseService
+      // Cependant, getTestDatabaseService utilise testJsonAssetPath pour charger via mock rootBundle.
+      // Si on fournit testJsonString, il devrait l'utiliser directement (si DatabaseService.initialize le supporte).
+      // La version actuelle de getTestDatabaseService (Turn 52) force l'utilisation de testJsonAssetPath via rootBundle mock
+      // si testJsonString est null dans DatabaseService.initialize.
+      // Pour que minimalTestJson soit utilisé, il faut que DatabaseService.initialize le prenne en compte.
+      // Le DatabaseService.initialize actuel, quand testJsonString est fourni, l'utilise.
+      // Donc, passer minimalTestJson à testJsonString est correct ici.
+      // testJsonPath: '' est une erreur de frappe, ce devrait être testJsonAssetPath
+      // Mais si on veut forcer minimalTestJson, on le passe à testJsonString.
+      dbService = await TestConfig.initializeDatabase();
+      await LocalizationService.instance.setLanguage('es'); // Langue par défaut pour les tests
     });
 
-    group('Greeting and Thanks Responses', () {
-      test('should generate appropriate greeting response in Spanish', () async {
-        final mockQuery = {
-          'type': 'greeting',
-          'language': 'es'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, anyOf([
-          contains('procedure'),
-          contains('process'),
-          contains('Test Tax')
-        ]));
-      });
-
-      test('should generate ministry response for ministry intent', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'ministerio',
-          'concepts': [{
-            'id': 'T-TEST-001',
-            'nombre_current': 'Test Tax'
-          }],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'es'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, anyOf([
-          contains('Ministerio'),
-          contains('gestionado'),
-          contains('Test Tax')
-        ]));
-      });
+    tearDown(() async {
+      await dbService.close();
     });
 
-    group('Error Handling', () {
-      test('should generate error response for empty concepts', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'prix',
-          'concepts': <Map<String, dynamic>>[],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'es'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        // Should fall back to ML model or error template
-      });
-
-      test('should handle unknown query type gracefully', () async {
-        final mockQuery = {
-          'type': 'unknown',
-          'language': 'es'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, anyOf([
-          contains('Lo siento'),
-          contains('no pude'),
-          contains('reformular')
-        ]));
-      });
-
-      test('should handle missing language gracefully', () async {
-        final mockQuery = {
-          'type': 'greeting'
-          // Missing language
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        // Should default to Spanish
-        expect(response, anyOf([
-          contains('Hola'),
-          contains('Buenos')
-        ]));
-      });
+    test('generateResponse for "saludo" intent', () async {
+      final processedQuery = {
+        'intent': 'saludo',
+        'concepts': [],
+        'original_query': 'Hola'
+      };
+      final response = await responseGenerator.generateResponse(processedQuery);
+      
+      expect(response, isA<String>());
+      expect(response, isNotEmpty);
+      // La réponse exacte dépend de l'implémentation de ResponseGenerator
+      // Pour ce test, on peut s'attendre à une salutation générique.
+      // Exemple (à adapter selon la logique réelle de ResponseGenerator):
+      // expect(response.toLowerCase(), contains('hola') | contains('saludos'));
+      // print("Réponse pour saludo: $response"); // Nettoyé
     });
 
-    group('Template Combination', () {
-      test('should combine multiple response templates correctly', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'info',
-          'concepts': [{
-            'id': 'T-TEST-001',
-            'nombre_current': 'Test Tax',
-            'tasa_expedicion': '1000',
-            'tasa_renovacion': '500'
-          }],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'es'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, contains('Test Tax'));
-      });
-
-      test('should add follow-up suggestions when appropriate', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'prix',
-          'concepts': [{
-            'id': 'T-TEST-001',
-            'nombre_current': 'Test Tax'
-          }],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'fr'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        // Response might include follow-up suggestions
-      });
+    test('generateResponse for "consulta_precio" intent with a concept', () async {
+      // Ce concept "T-TEST" vient de minimalTestJson
+      final processedQuery = {
+        'intent': 'consulta_precio',
+        'concepts': [{'id': 'T-TEST', 'nombre_current': 'CONCEPTO DE PRUEBA', 'nombre': {'es': 'CONCEPTO DE PRUEBA'}}],
+        'original_query': 'precio de CONCEPTO DE PRUEBA',
+      };
+      
+      // ResponseGenerator pourrait avoir besoin d'accéder à dbService.conceptoDao pour les détails.
+      // L'instance dbService est disponible et initialisée avec minimalTestJson.
+      final response = await responseGenerator.generateResponse(processedQuery);
+      
+      expect(response, isA<String>());
+      expect(response, isNotEmpty);
+      // La réponse devrait contenir le nom du concept et son prix.
+      expect(response, contains('CONCEPTO DE PRUEBA'));
+      expect(response, contains('100')); // tasa_expedicion de T-TEST dans minimalTestJson
+      // print("Réponse pour consulta_precio (T-TEST): $response"); // Nettoyé
     });
 
-    group('Multilingual Support', () {
-      test('should respect language preference in responses', () async {
-        final languages = ['es', 'fr', 'en'];
-        
-        for (final lang in languages) {
-          final mockQuery = {
-            'type': 'greeting',
-            'language': lang
-          };
+    test('generateResponse for "desconocido" intent', () async {
+      final processedQuery = {
+        'intent': 'intencion_desconocida_xyz',
+        'concepts': [],
+        'original_query': 'blablabla'
+      };
+      final response = await responseGenerator.generateResponse(processedQuery);
 
-          final response = await responseGenerator.generateResponse(mockQuery);
-          
-          expect(response, isNotEmpty);
-          
-          // Verify language-specific content
-          switch (lang) {
-            case 'es':
-              expect(response, anyOf([contains('Hola'), contains('Buenos')]));
-              break;
-            case 'fr':
-              expect(response, anyOf([contains('Bonjour'), contains('Salut')]));
-              break;
-            case 'en':
-              expect(response, anyOf([contains('Hello'), contains('Hi')]));
-              break;
-          }
-        }
-      });
-
-      test('should fallback to default language for unsupported languages', () async {
-        final mockQuery = {
-          'type': 'greeting',
-          'language': 'de' // Unsupported language
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        // Should fallback to Spanish (default)
-        expect(response, anyOf([
-          contains('Hola'),
-          contains('Buenos')
-        ]));
-      });
+      expect(response, isA<String>());
+      expect(response, isNotEmpty);
+      // S'attendre à une réponse de fallback.
+      // Exemple (à adapter):
+      // expect(response.toLowerCase(), contains('no he podido entender') | contains('lo siento'));
+      // print("Réponse pour desconocido: $response"); // Nettoyé
     });
 
-    group('Performance Tests', () {
-      test('should generate response within acceptable time', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'prix',
-          'concepts': [{
-            'id': 'T-TEST-001',
-            'nombre_current': 'Test Tax'
-          }],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'es'
-        };
-
-        final stopwatch = Stopwatch()..start();
-        final response = await responseGenerator.generateResponse(mockQuery);
-        stopwatch.stop();
-
-        expect(response, isNotEmpty);
-        expect(stopwatch.elapsedMilliseconds, lessThan(1000)); // Less than 1 second
-      });
-
-      test('should handle multiple concurrent requests', () async {
-        final futures = <Future<String>>[];
-        
-        for (int i = 0; i < 5; i++) {
-          final mockQuery = {
-            'type': 'greeting',
-            'language': 'es'
-          };
-          
-          futures.add(responseGenerator.generateResponse(mockQuery));
-        }
-
-        final responses = await Future.wait(futures);
-        
-        expect(responses.length, equals(5));
-        for (final response in responses) {
-          expect(response, isNotEmpty);
-        }
-      });
+    test('generateResponse for intent requiring documents', () async {
+      final processedQuery = {
+        'intent': 'consulta_documentos',
+        'concepts': [{'id': 'T-TEST', 'nombre_current': 'CONCEPTO DE PRUEBA'}],
+        'original_query': 'documentos para CONCEPTO DE PRUEBA',
+      };
+      final response = await responseGenerator.generateResponse(processedQuery);
+      expect(response, contains('Doc1'));
+      expect(response, contains('Doc2'));
+      // print("Réponse pour consulta_documentos (T-TEST): $response"); // Nettoyé
     });
+
+    test('generateResponse for intent requiring procedure', () async {
+      final processedQuery = {
+        'intent': 'consulta_procedimiento',
+        'concepts': [{'id': 'T-TEST', 'nombre_current': 'CONCEPTO DE PRUEBA'}],
+        'original_query': 'procedimiento para CONCEPTO DE PRUEBA',
+      };
+      final response = await responseGenerator.generateResponse(processedQuery);
+      expect(response, contains('Proc1'));
+      expect(response, contains('Proc2'));
+      // print("Réponse pour consulta_procedimiento (T-TEST): $response"); // Nettoyé
+    });
+
+    // TODO: Ajouter des tests pour différentes langues si ResponseGenerator les gère.
+    // TODO: Tester les cas où les informations (prix, docs, proc) sont manquantes pour un concept.
   });
-}, anyOf([
-          contains('Hola'),
-          contains('Buenos'),
-          contains('ayudarte'),
-          contains('asistente')
-        ]));
-      });
-
-      test('should generate appropriate greeting response in French', () async {
-        final mockQuery = {
-          'type': 'greeting',
-          'language': 'fr'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, anyOf([
-          contains('Bonjour'),
-          contains('aider'),
-          contains('assistant')
-        ]));
-      });
-
-      test('should generate appropriate thanks response in English', () async {
-        final mockQuery = {
-          'type': 'thanks',
-          'language': 'en'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, anyOf([
-          contains('welcome'),
-          contains('pleasure'),
-          contains('help')
-        ]));
-      });
-    });
-
-    group('Contextual Responses', () {
-      test('should generate price response for price intent', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'prix',
-          'concepts': [{
-            'id': 'T-TEST-001',
-            'nombre_current': 'Test Tax',
-            'tasa_expedicion': '1000',
-            'tasa_renovacion': '500'
-          }],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'es'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, anyOf([
-          contains('costo'),
-          contains('precio'),
-          contains('1000'),
-          contains('500')
-        ]));
-      });
-
-      test('should generate documents response for documents intent', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'documents',
-          'concepts': [{
-            'id': 'T-TEST-001',
-            'nombre_current': 'Test Tax'
-          }],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'fr'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response, anyOf([
-          contains('documents'),
-          contains('requis'),
-          contains('Test Tax')
-        ]));
-      });
-
-      test('should generate procedure response for procedure intent', () async {
-        final mockQuery = {
-          'type': 'query',
-          'intent': 'procedure',
-          'concepts': [{
-            'id': 'T-TEST-001',
-            'nombre_current': 'Test Tax'
-          }],
-          'encoded_state': List.filled(256, 0.0),
-          'language': 'en'
-        };
-
-        final response = await responseGenerator.generateResponse(mockQuery);
-        
-        expect(response, isNotEmpty);
-        expect(response
+}

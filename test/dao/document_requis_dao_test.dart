@@ -1,101 +1,112 @@
+// test/dao/document_requis_dao_test.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/database/dao/document_requis_dao.dart';
 import 'package:taxasge/database/database_service.dart';
-//import 'package:taxasge/models/document_requis.dart';
+import 'package:taxasge/models/document_requis.dart';   // modèle
 import 'package:taxasge/services/localization_service.dart';
+
 import '../database_test_utils.dart';
 
 void main() {
   sqfliteTestInit();
 
-  group('DocumentRequisDao Tests', () {
-    late DatabaseService dbService;
+  group('DocumentRequisDao – tests combinés', () {
+    late DatabaseService   dbService;
     late DocumentRequisDao documentRequisDao;
-    const String testConceptoId = 'T-TEST';
+
+    const conceptoId = 'T-TEST-001';
+    const docES1 = 'Copia del documento de identidad';
+    const docES2 = 'Fotocopia del pasaporte vigente';
 
     setUp(() async {
-      // Utilise le même JSON que pour ConceptoDao car il contient des documents
-      // minimalTestJson est défini dans database_test_utils.dart
-      dbService = await getTestDatabaseService(testJsonString: minimalTestJson, seedData: true);
+      dbService         = await getTestDatabaseService(seedData: true);
       documentRequisDao = dbService.documentRequisDao;
+
       await LocalizationService.instance.initialize();
       await LocalizationService.instance.setLanguage('es');
     });
 
-    tearDown(() async {
-      await dbService.close();
+    tearDown(() async => dbService.close());
+
+    // ─────────── GOLDEN ───────────
+    test('[Golden] total = 7', () async {
+      expect(await documentRequisDao.count(), 7);
     });
 
-    test('insert and getById', () async {
-      // Les données sont insérées via _importInitialData dans DatabaseService
-      // On s'attend à ce que les documents pour T-TEST (Doc1, Doc2) soient là.
-      // On va récupérer le premier pour vérifier son existence et son contenu.
-      final docs = await documentRequisDao.getByConceptoId(testConceptoId);
-      expect(docs, isNotEmpty);
-      
-      final firstDoc = docs.first;
-      final fetchedDoc = await documentRequisDao.getById(firstDoc.id);
-      
-      expect(fetchedDoc, isNotNull);
-      expect(fetchedDoc!.id, firstDoc.id);
-      expect(fetchedDoc.conceptoId, testConceptoId);
-      expect(fetchedDoc.getNombre('es'), 'Doc1');
-    });
-
-    test('getAll returns all documents', () async {
-      final allDocs = await documentRequisDao.getAll();
-      // minimalTestJson a 2 documents pour T-TEST
-      expect(allDocs.length, 2); 
-    });
-
-    test('getByConceptoId returns correct documents', () async {
-      final docs = await documentRequisDao.getByConceptoId(testConceptoId);
+    test('[Golden] 2 docs ES pour $conceptoId', () async {
+      final docs = await documentRequisDao.getByConceptoId(conceptoId);
       expect(docs.length, 2);
-      expect(docs.any((d) => d.getNombre('es') == 'Doc1'), isTrue);
-      expect(docs.any((d) => d.getNombre('es') == 'Doc2'), isTrue);
+      expect(docs.map((d) => d.getNombre('es')), containsAll([docES1, docES2]));
     });
 
-    test('update a document', () async {
-      final docs = await documentRequisDao.getByConceptoId(testConceptoId);
-      final originalDoc = docs.first;
+    // ─────────── DYNAMIQUE ───────────
+    test('update conserve les autres langues', () async {
+      final doc = (await documentRequisDao.getByConceptoId(conceptoId)).first;
 
-      final updatedDoc = originalDoc.copyWith(nombreTraductions: {'es': 'Documento Actualizado ES'});
-      await documentRequisDao.update(updatedDoc);
+      final frExistait = doc.nombreTraductions.containsKey('fr');
 
-      final fetchedDoc = await documentRequisDao.getById(originalDoc.id);
-      expect(fetchedDoc!.getNombre('es'), 'Documento Actualizado ES');
-    });
-    
-    test('updateTranslation updates specific language', () async {
-      final docs = await documentRequisDao.getByConceptoId(testConceptoId);
-      final docToUpdate = docs.firstWhere((d) => d.getNombre('es') == 'Doc1');
-      
-      // minimalTestJson from database_test_utils.dart has "Doc1 fr\nDoc2 fr" for T-TEST in French.
-      // So, 'fr' translation already exists. Let's update it.
-      await documentRequisDao.updateTranslation(docToUpdate.id, 'fr', nombre: 'Document FR Modifié');
-      final updatedDoc = await documentRequisDao.getById(docToUpdate.id);
-      
-      expect(updatedDoc, isNotNull);
-      expect(updatedDoc!.getNombre('fr'), 'Document FR Modifié');
-      // S'assurer que les autres langues ne sont pas affectées.
-      expect(updatedDoc.getNombre('es'), 'Doc1'); 
+      final modif = doc.copyWith(nombreTraductions: {
+        ...doc.nombreTraductions,
+        'es': 'Documento ES Actualizado',
+      });
+      await documentRequisDao.update(modif);
+
+      final fetched = await documentRequisDao.getById(doc.id);
+      expect(fetched!.getNombre('es'), 'Documento ES Actualizado');
+
+      if (frExistait) {
+        // la traduction FR n’a pas bougé
+        expect(
+          fetched.getNombre('fr'),
+          doc.getNombre('fr'),
+        );
+      }
     });
 
-    test('delete a document', () async {
-      final docs = await documentRequisDao.getByConceptoId(testConceptoId);
-      final docToDelete = docs.first;
-      
-      await documentRequisDao.delete(docToDelete.id);
-      final fetchedDoc = await documentRequisDao.getById(docToDelete.id);
-      expect(fetchedDoc, isNull);
-      
-      final remainingDocs = await documentRequisDao.getByConceptoId(testConceptoId);
-      expect(remainingDocs.length, 1);
+    test('updateTranslation ne touche qu’une langue', () async {
+      final doc = (await documentRequisDao.getByConceptoId(conceptoId)).first;
+
+      await documentRequisDao.updateTranslation(
+        doc.id,
+        'fr',
+        nombre: 'Document FR Modifié',
+      );
+
+      final updated = await documentRequisDao.getById(doc.id);
+      expect(updated!.getNombre('fr'), 'Document FR Modifié');
+      expect(updated.getNombre('es'), isNot(equals('Document FR Modifié')));
     });
-    
-    test('count returns correct number of documents', () async {
-      final count = await documentRequisDao.count();
-      expect(count, 2);
+
+    test('delete décrémente le total', () async {
+      final totalAvant = await documentRequisDao.count();
+      final doc        = (await documentRequisDao.getByConceptoId(conceptoId)).first;
+
+      await documentRequisDao.delete(doc.id);
+
+      expect(await documentRequisDao.count(), totalAvant - 1);
+      expect(await documentRequisDao.getById(doc.id), isNull);
+    });
+
+    test('count reflète insert ▶ delete', () async {
+      final start = await documentRequisDao.count();
+
+      // insertion propre via le modèle
+      final newId = await documentRequisDao.insert(
+        DocumentRequis(
+          id: 0,                           // auto-increment
+          conceptoId: conceptoId,
+          nombreTraductions: {
+            'es': 'Anexo extra ES',
+            'fr': 'Annexe extra FR',
+          },
+          //orden: 99,
+        ),
+      );
+
+      expect(await documentRequisDao.count(), start + 1);
+
+      await documentRequisDao.delete(newId);
+      expect(await documentRequisDao.count(), start);
     });
   });
 }

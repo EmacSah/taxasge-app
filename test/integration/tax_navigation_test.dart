@@ -35,7 +35,7 @@ void main() {
                 final file = File('test/test_assets/test_taxes.json'); // S'assurer que ce chemin est correct
                 return await file.readAsString(); // loadString attend une String
               } catch (e) {
-                print('Erreur chargement test_taxes.json dans tax_navigation_test: $e');
+                // print('Erreur chargement test_taxes.json dans tax_navigation_test: $e'); // Nettoyé
                 // Retourner un JSON minimal valide pour éviter de planter si le fichier est manquant
                 return '[]'; // Correct, loadString attend Future<String>, pas besoin de Future.value si c'est déjà une string
               }
@@ -56,7 +56,7 @@ void main() {
               return header.buffer.asByteData(); // Correct pour rootBundle.load
             }
           }
-          print("Unhandled asset in mock for ${methodCall.method}: ${methodCall.arguments}");
+          // print("Unhandled asset in mock for ${methodCall.method}: ${methodCall.arguments}"); // Nettoyé
           return null;
         },
       );

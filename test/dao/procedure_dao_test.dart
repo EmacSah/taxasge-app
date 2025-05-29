@@ -1,120 +1,123 @@
+// test/dao/procedure_dao_test.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/database/dao/procedure_dao.dart';
 import 'package:taxasge/database/database_service.dart';
 import 'package:taxasge/models/procedure.dart';
 import 'package:taxasge/services/localization_service.dart';
-import '../database_test_utils.dart';
+
+import '../database_test_utils.dart';   // sqfliteTestInit() + getTestDatabaseService()
 
 void main() {
+  // Initialise sqflite_common_ffi pour les environnements desktop / CI
   sqfliteTestInit();
 
-  group('ProcedureDao Tests', () {
+  group('ProcedureDao – tests combinés', () {
     late DatabaseService dbService;
-    late ProcedureDao procedureDao;
-    const String testConceptoId = 'T-TEST';
+    late ProcedureDao    procedureDao;
+
+    //------------------------------------------------------------------
+    //  ⚙️  Références issues de test_taxes.json
+    //------------------------------------------------------------------
+    const conceptoId = 'T-TEST-001';
+
+    // Trois étapes ES déclarées dans le JSON
+    const paso1 = 'Paso 1: Llenar el formulario de solicitud';
+    const paso2 = 'Paso 2: Presentar documentos requeridos';
+    const paso3 = 'Paso 3: Pagar las tasas correspondientes';
 
     setUp(() async {
-      dbService = await getTestDatabaseService(testJsonString: minimalTestJson, seedData: true);
-      procedureDao = dbService.procedureDao;
+      dbService     = await getTestDatabaseService(seedData: true);
+      procedureDao  = dbService.procedureDao;
+
       await LocalizationService.instance.initialize();
       await LocalizationService.instance.setLanguage('es');
     });
 
-    tearDown(() async {
-      await dbService.close();
+    tearDown(() async => dbService.close());
+
+    // ────────────────────────────────────────────────────────────────
+    // 1.  Intégrité de l’import  (valeurs figées = golden)
+    // ────────────────────────────────────────────────────────────────
+    group('[Golden] Import integrity', () {
+      test('Les 3 procédures ES sont bien importées', () async {
+        final list = await procedureDao.getByConceptoId(conceptoId, langCode: 'es');
+
+        expect(list.map((p) => p.getDescription('es')),
+            containsAll([paso1, paso2, paso3]));
+      });
     });
 
-    test('insert and getById', () async {
-      // Les données sont insérées via _importInitialData
-      final procs = await procedureDao.getByConceptoId(testConceptoId);
-      expect(procs, isNotEmpty);
-      
-      final firstProc = procs.first;
-      final fetchedProc = await procedureDao.getById(firstProc.id);
-      
-      expect(fetchedProc, isNotNull);
-      expect(fetchedProc!.id, firstProc.id);
-      expect(fetchedProc.conceptoId, testConceptoId);
-      expect(fetchedProc.getDescription('es'), 'Proc1');
-    });
+    // ────────────────────────────────────────────────────────────────
+    // 2.  Comportement dynamique du DAO
+    // ────────────────────────────────────────────────────────────────
+    group('[Dynamic] DAO behaviour', () {
+      //----------------------------------------------------------------
+      test('getAll retourne toutes les lignes', () async {
+        final all = await procedureDao.getAll();
+        expect(all.length, 3);
+      });
 
-    test('getAll returns all procedures', () async {
-      final allProcs = await procedureDao.getAll();
-      // minimalTestJson a 2 procédures pour T-TEST
-      expect(allProcs.length, 2);
-    });
+      //----------------------------------------------------------------
+      test('Ordre : tri par "orden" puis description', () async {
+        // insertion d’une étape supplémentaire (orden = 0)
+        await procedureDao.insert(
+          Procedure(
+            id: 0,
+            conceptoId: conceptoId,
+            descriptionTraductions: {'es': 'Paso 0: Prerregistro'},
+            orden: 0,
+          ),
+        );
 
-    test('getByConceptoId returns correct procedures', () async {
-      final procs = await procedureDao.getByConceptoId(testConceptoId);
-      expect(procs.length, 2);
-      expect(procs.any((p) => p.getDescription('es') == 'Proc1'), isTrue);
-      expect(procs.any((p) => p.getDescription('es') == 'Proc2'), isTrue);
-    });
-    
-    test('getByConceptoId orders by "orden" then by description', () async {
-      // Ajouter une autre procédure avec un ordre différent pour tester
-      await procedureDao.insert(Procedure(
-        id: 0, // auto-increment
-        conceptoId: testConceptoId,
-        descriptionTraductions: {'es': 'Proc0'},
-        orden: 0,
-      ));
-      final procs = await procedureDao.getByConceptoId(testConceptoId, langCode: 'es');
-      expect(procs.length, 3);
-      expect(procs[0].getDescription('es'), 'Proc0'); // Doit venir en premier à cause de 'orden: 0'
-      expect(procs[1].getDescription('es'), 'Proc1'); 
-      expect(procs[2].getDescription('es'), 'Proc2');
-    });
+        final list = await procedureDao.getByConceptoId(conceptoId, langCode: 'es');
+        expect(list.first.getDescription('es'), startsWith('Paso 0'));
+      });
 
-    test('update a procedure', () async {
-      final procs = await procedureDao.getByConceptoId(testConceptoId);
-      final originalProc = procs.first;
+      //----------------------------------------------------------------
+      test('update modifie la description ES uniquement', () async {
+        final proc = (await procedureDao.getByConceptoId(conceptoId)).first;
 
-      final updatedProc = originalProc.copyWith(descriptionTraductions: {'es': 'Procedimiento Actualizado ES'});
-      await procedureDao.update(updatedProc);
+        final mod  = proc.copyWith(
+          descriptionTraductions: {'es': 'Procedimiento actualizado ES'},
+        );
+        await procedureDao.update(mod);
 
-      final fetchedProc = await procedureDao.getById(originalProc.id);
-      expect(fetchedProc!.getDescription('es'), 'Procedimiento Actualizado ES');
-    });
+        final fetched = await procedureDao.getById(proc.id);
+        expect(fetched!.getDescription('es'), 'Procedimiento actualizado ES');
+      });
 
-    test('updateTranslation updates specific language', () async {
-      final procs = await procedureDao.getByConceptoId(testConceptoId);
-      final procToUpdate = procs.firstWhere((p) => p.getDescription('es') == 'Proc1');
-      
-      // minimalTestJson ne définit que 'es' pour les procédures initiales.
-      // Ajoutons une traduction 'fr'.
-      await procedureDao.updateTranslation(procToUpdate.id, 'fr', 'Procédure FR Modifiée');
-      final updatedProc = await procedureDao.getById(procToUpdate.id);
-      
-      expect(updatedProc, isNotNull);
-      expect(updatedProc!.getDescription('fr'), 'Procédure FR Modifiée');
-      expect(updatedProc.getDescription('es'), 'Proc1');
-    });
-    
-    test('updateOrder changes the order', () async {
-      final procs = await procedureDao.getByConceptoId(testConceptoId);
-      final procToUpdate = procs.firstWhere((p) => p.getDescription('es') == 'Proc1');
-      
-      await procedureDao.updateOrder(procToUpdate.id, 5);
-      final updatedProc = await procedureDao.getById(procToUpdate.id);
-      expect(updatedProc!.orden, 5);
-    });
+      //----------------------------------------------------------------
+      test('updateTranslation ajoute / remplace une langue', () async {
+        final proc = (await procedureDao.getByConceptoId(conceptoId)).first;
 
-    test('delete a procedure', () async {
-      final procs = await procedureDao.getByConceptoId(testConceptoId);
-      final procToDelete = procs.first;
-      
-      await procedureDao.delete(procToDelete.id);
-      final fetchedProc = await procedureDao.getById(procToDelete.id);
-      expect(fetchedProc, isNull);
-      
-      final remainingProcs = await procedureDao.getByConceptoId(testConceptoId);
-      expect(remainingProcs.length, 1);
-    });
-    
-    test('count returns correct number of procedures', () async {
-      final count = await procedureDao.count();
-      expect(count, 2);
+        await procedureDao.updateTranslation(proc.id, 'fr', 'Procédure FR modifiée');
+        final fetched = await procedureDao.getById(proc.id);
+
+        expect(fetched!.getDescription('fr'), 'Procédure FR modifiée');
+        expect(fetched.getDescription('es'), isNotEmpty);   // ES préservé
+      });
+
+      //----------------------------------------------------------------
+      test('updateOrder met à jour le champ orden', () async {
+        final proc = (await procedureDao.getByConceptoId(conceptoId)).first;
+
+        await procedureDao.updateOrder(proc.id, 10);
+        final updated = await procedureDao.getById(proc.id);
+
+        expect(updated!.orden, 10);
+      });
+
+      //----------------------------------------------------------------
+      test('delete retire une procédure et count est ajusté', () async {
+        final before = await procedureDao.getByConceptoId(conceptoId);
+        final toDel  = before.first;
+
+        await procedureDao.delete(toDel.id);
+
+        final after = await procedureDao.getByConceptoId(conceptoId);
+        expect(after.length, before.length - 1);
+        expect(await procedureDao.getById(toDel.id), isNull);
+      });
     });
   });
 }

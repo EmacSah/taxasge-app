@@ -31,7 +31,7 @@ void main() {
               final file = File('test/test_assets/test_taxes.json');
               return await file.readAsString(); // Correct: loadString attend Future<String>
             } catch (e) {
-              print('Erreur chargement test_taxes.json dans localization_flow_test: $e');
+              // print('Erreur chargement test_taxes.json dans localization_flow_test: $e'); // Nettoyé
               return '[]'; // Correct: loadString attend Future<String>
             }
           }
@@ -44,7 +44,7 @@ void main() {
             header.setInt64(8, 0, Endian.little);
             return header.buffer.asByteData(); // Correct pour rootBundle.load
           }
-          print("Unhandled asset in mock for ${methodCall.method}: ${methodCall.arguments}");
+          // print("Unhandled asset in mock for ${methodCall.method}: ${methodCall.arguments}"); // Nettoyé
           return null;
         },
       );

@@ -1,12 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/services/chatbot_service.dart';
 import 'package:taxasge/services/localization_service.dart';
-import 'package:taxasge/models/chat_message.dart';
-import 'package:mockito/mockito.dart'; // Importation standard
+//import 'package:taxasge/models/chat_message.dart';
+//import 'package:mockito/mockito.dart'; // Importation standard
 import 'package:shared_preferences/shared_preferences.dart'; // Ajout pour SharedPreferences
 import '../database_test_utils.dart'; // Pour sqfliteTestInit
-import '../mocks/mock_nlp_services.dart'; // Importer les mocks
-import 'package:flutter/material.dart';
+//import '../mocks/mock_nlp_services.dart'; // Importer les mocks
 
 // Recréer des instances de mock si elles ne sont pas auto-générées par build_runner
 // Ces lignes ne sont nécessaires que si vous n'utilisez pas build_runner pour générer les mocks.
@@ -19,9 +19,9 @@ void main() {
   sqfliteTestInit(); // Pour LocalizationService qui peut dépendre de la DB pour les prefs
   
   late ChatbotService chatbotService;
-  late MockModelService mockModelService;
-  late MockQueryProcessor mockQueryProcessor;
-  late MockResponseGenerator mockResponseGenerator;
+  //late MockModelService mockModelService;
+  //late MockQueryProcessor mockQueryProcessor;
+  //late MockResponseGenerator mockResponseGenerator;
 
   setUp(() async {
     // Initialiser SharedPreferences pour LocalizationService
@@ -29,9 +29,9 @@ void main() {
     await LocalizationService.instance.initialize();
     await LocalizationService.instance.setLanguage('es');
 
-    mockModelService = MockModelService();
-    mockQueryProcessor = MockQueryProcessor();
-    mockResponseGenerator = MockResponseGenerator();
+    //mockModelService = MockModelService();
+    //mockQueryProcessor = MockQueryProcessor();
+    //mockResponseGenerator = MockResponseGenerator();
 
     // Ici, il faudrait pouvoir injecter les mocks dans ChatbotService.
     // Puisque ChatbotService utilise des singletons pour ses dépendances NLP,

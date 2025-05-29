@@ -34,6 +34,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test: ^0.8.0
   flutter_lints: ^5.0.0  # Mise à jour de la version
   mockito: ^5.4.4
   build_runner: ^2.4.10

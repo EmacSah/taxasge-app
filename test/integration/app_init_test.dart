@@ -40,7 +40,7 @@ void main() {
               // A more correct implementation would be: return Future.value(content);
               return utf8.encode(content); 
             } catch (e) {
-              print('Erreur chargement test_taxes.json dans app_init_test: $e');
+              // print('Erreur chargement test_taxes.json dans app_init_test: $e'); // Nettoyé
               // Returning null might cause issues, better to return a Future<String> of an empty list or throw.
               // For strict adherence:
               return null; 
@@ -60,7 +60,7 @@ void main() {
             header.setInt64(8, 0, Endian.little);
             return header.buffer.asByteData(); // This is correct for rootBundle.load
           }
-          print("Unhandled asset in mock for ${methodCall.method}: ${methodCall.arguments}");
+          // print("Unhandled asset in mock for ${methodCall.method}: ${methodCall.arguments}"); // Nettoyé
           return null;
         },
       );
@@ -95,7 +95,7 @@ void main() {
       final BuildContext context = tester.element(find.byType(MaterialApp)); // Trouver le contexte de MaterialApp
       
       expect(Provider.of<LocalizationService>(context, listen: false).isInitialized, isTrue);
-      expect(Provider.of<ChatbotService>(context, listen: false).isInitialized, isTrue);
+      expect(Provider.of<ChatbotService>(context, listen: false).isProcessing, isTrue);
       
       final dbService = Provider.of<DatabaseService>(context, listen: false); // Supposant qu'il est fourni
       expect(dbService.isOpen, isTrue);

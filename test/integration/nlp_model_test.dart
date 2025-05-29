@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'dart:convert';
+// import 'dart:convert'; // Non utilisé
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
@@ -51,7 +50,7 @@ void main() {
             if (await file.exists()) {
               return await file.readAsString();
             } else {
-              debugPrint("Mock Asset Warning: Vrai fichier $assetPath non trouvé, retourne mock vide.");
+              // print("Mock Asset Warning: Vrai fichier $assetPath non trouvé, retourne mock vide."); // Nettoyé
               return '{}'; // Mock vide pour éviter de planter
             }
           } else if (key.endsWith('.tflite')) { // Pour le modèle
@@ -60,7 +59,7 @@ void main() {
               final bytes = await file.readAsBytes();
               return ByteData.view(bytes.buffer);
             } else {
-              debugPrint("Mock Asset Warning: Vrai fichier $assetPath non trouvé, retourne mock vide/bidon.");
+              // print("Mock Asset Warning: Vrai fichier $assetPath non trouvé, retourne mock vide/bidon."); // Nettoyé
               final ByteData header = ByteData(16); // En-tête minimal
               header.setInt64(0, 0, Endian.little);
               header.setInt64(8, 0, Endian.little);
@@ -68,7 +67,7 @@ void main() {
             }
           }
         } catch (e) {
-          debugPrint('Erreur de chargement de l asset $assetPath via le mock: $e');
+          // print('Erreur de chargement de l'asset $assetPath via le mock: $e'); // Nettoyé
           return null;
         }
         return null; // Non géré par ce mock
@@ -100,8 +99,8 @@ void main() {
       try {
         encodedQuestion = modelService.encodeText(testQuestionWord, true);
       } catch (e) {
-        debugPrint("Erreur durant encodeText (question): $e. Cela peut arriver si le tokenizer de question est vide ou si '$testQuestionWord' n'est pas dedans et qu'il n'y a pas de token OOV géré comme attendu.");
-        fail("Échec de l'encodage du texte de la question. Vérifiez les tokenizers.");
+        // print("Erreur durant encodeText (question): $e. Cela peut arriver si le tokenizer de question est vide ou si '$testQuestionWord' n'est pas dedans et qu'il n'y a pas de token OOV géré comme attendu."); // Nettoyé
+        fail("Échec de l'encodage du texte de la question. Vérifiez les tokenizers. Erreur: $e");
       }
 
       expect(encodedQuestion, isNotEmpty);
@@ -117,8 +116,8 @@ void main() {
        try {
         encodedAnswer = modelService.encodeText(testAnswerWord, false);
       } catch (e) {
-        debugPrint("Erreur durant encodeText (réponse): $e. Cela peut arriver si le tokenizer de réponse est vide ou si '$testAnswerWord' n'est pas dedans et qu'il n'y a pas de token OOV géré comme attendu.");
-        fail("Échec de l'encodage du texte de la réponse. Vérifiez les tokenizers.");
+        // print("Erreur durant encodeText (réponse): $e. Cela peut arriver si le tokenizer de réponse est vide ou si '$testAnswerWord' n'est pas dedans et qu'il n'y a pas de token OOV géré comme attendu."); // Nettoyé
+        fail("Échec de l'encodage du texte de la réponse. Vérifiez les tokenizers. Erreur: $e");
       }
       expect(encodedAnswer, isNotEmpty);
 
@@ -127,7 +126,7 @@ void main() {
       final String decodedText = modelService.decodeSequence([4, 5, 6, 3]); // 3 est <END>
       expect(decodedText, isA<String>());
       // La valeur exacte dépendra du contenu du tokenizer de réponse.
-      debugPrint("Texte décodé (exemple): $decodedText"); 
+      // print("Texte décodé (exemple): $decodedText"); // Nettoyé
     });
 
     // Le test d'inférence complet est complexe car il nécessite un modèle TFLite valide et fonctionnel.
@@ -141,8 +140,8 @@ void main() {
       try {
         encoderState = await modelService.encodeQuestion(testQuery);
       } catch (e) {
-        debugPrint("Erreur durant encodeQuestion: $e. Assurez-vous que le modèle TFLite (encodeur) est correctement chargé et que les tokenizers ne sont pas vides.");
-        fail("encodeQuestion a échoué.");
+        // print("Erreur durant encodeQuestion: $e. Assurez-vous que le modèle TFLite (encodeur) est correctement chargé et que les tokenizers ne sont pas vides."); // Nettoyé
+        fail("encodeQuestion a échoué. Erreur: $e");
       }
       
       expect(encoderState, isNotEmpty, reason: "L'état de l'encodeur ne devrait pas être vide.");
@@ -152,13 +151,13 @@ void main() {
       try {
         response = await modelService.generateResponse(encoderState);
       } catch (e) {
-        debugPrint("Erreur durant generateResponse: $e. Assurez-vous que le modèle TFLite (décodeur) est correctement chargé.");
-        fail("generateResponse a échoué.");
+        // print("Erreur durant generateResponse: $e. Assurez-vous que le modèle TFLite (décodeur) est correctement chargé."); // Nettoyé
+        fail("generateResponse a échoué. Erreur: $e");
       }
 
       expect(response, isA<String>());
       expect(response, isNotEmpty, reason: "La réponse générée ne devrait pas être vide.");
-      debugPrint("Question: '$testQuery' -> Réponse du modèle: '$response'");
+      // print("Question: '$testQuery' -> Réponse du modèle: '$response'"); // Nettoyé
       // Idéalement, ici on vérifierait si la réponse est pertinente ou correspond à une attente.
       // Par exemple, si on s'attend à une réponse de type "prix":
       // expect(response.toLowerCase(), contains("precio") | contains("cuesta") | contains("fcfa"));
