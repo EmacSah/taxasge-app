@@ -87,7 +87,7 @@ void main() {
       }
     });
 
-    // TODO: Ajouter des tests pour la direction RTL si AppTheme et MessageBubble la gèrent différemment.
+    // Ajouter des tests pour la direction RTL si AppTheme et MessageBubble la gèrent différemment.
     // Par exemple, en changeant currentLang pour 'ar' (arabe) et en vérifiant l'alignement
     // et le coin arrondi spécifique de la bulle.
     // Exemple (nécessiterait que 'ar' soit dans AppTheme.supportedLocales et que les décorations s'inversent)

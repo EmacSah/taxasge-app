@@ -19,11 +19,24 @@ pkgs.mkShell {
     # Pour les tests FFI (libsqlite3)
     pkgs.sqlite
 
+
+    # CMake pour les builds Linux
+    pkgs.cmake
+    pkgs.ninja
+    pkgs.pkg-config
+
+
+    # Dépendances Linux pour Flutter
+    pkgs.gtk3
+    pkgs.glib
+    pkgs.libepoxy
+
+
+
     # Outils optionnels utiles
     pkgs.git
     pkgs.curl
     pkgs.unzip
-    pkgs.pkg-config
   ];
 
   shellHook = ''

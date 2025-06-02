@@ -119,7 +119,7 @@ void main() {
       // print("Réponse pour consulta_procedimiento (T-TEST): $response"); // Nettoyé
     });
 
-    // TODO: Ajouter des tests pour différentes langues si ResponseGenerator les gère.
-    // TODO: Tester les cas où les informations (prix, docs, proc) sont manquantes pour un concept.
+    // Ajouter des tests pour différentes langues si ResponseGenerator les gère.
+    // Tester les cas où les informations (prix, docs, proc) sont manquantes pour un concept.
   });
 }
