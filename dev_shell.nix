@@ -1,5 +1,9 @@
 # dev_shell.nix
-{ pkgs ? import <nixpkgs> {} }:
+#{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? import (builtins.fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz";
+    # Vous pouvez pinger une version taggée précise si besoin, par ex. #ref = "abcdef...";
+  }) {} }:
 
 pkgs.mkShell {
   name = "taxasge-dev-env";
@@ -12,12 +16,14 @@ pkgs.mkShell {
       ps.scikit-learn     # sklearn
       ps.pip
     ]))
+
     # Dart & Flutter dependencies
     pkgs.flutter
     pkgs.dart
 
     # Pour les tests FFI (libsqlite3)
     pkgs.sqlite
+    #sqlite
 
 
     # CMake pour les builds Linux
@@ -40,6 +46,8 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
+    #→ Ajouter Flutter (et donc Dart) au PATH
+    export PATH=${pkgs.flutter}/bin:$PATH
     export LD_LIBRARY_PATH=${pkgs.sqlite.out}/lib:$LD_LIBRARY_PATH
     echo "✅ Environnement de développement TaxasGE prêt"
     echo "➡️  Utilise 'flutter pub get' pour installer les dépendances."
