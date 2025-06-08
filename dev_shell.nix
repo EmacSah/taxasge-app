@@ -29,6 +29,7 @@ pkgs.mkShell {
     # CMake pour les builds Linux
     pkgs.cmake
     pkgs.ninja
+    pkgs.clang
     pkgs.pkg-config
 
 
@@ -43,6 +44,7 @@ pkgs.mkShell {
     pkgs.git
     pkgs.curl
     pkgs.unzip
+    
   ];
 
   shellHook = ''
