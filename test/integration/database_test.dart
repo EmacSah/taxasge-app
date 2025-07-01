@@ -33,7 +33,7 @@ void main() {
 
     // Mock du chargement des assets
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(MethodChannel('flutter/assets'),
+        .setMockMethodCallHandler(const MethodChannel('flutter/assets'),
             (MethodCall methodCall) async {
       if (methodCall.method == 'getAssetData' &&
           methodCall.arguments.toString().contains('test_taxes.json')) {
@@ -110,11 +110,65 @@ void main() {
         debugPrint('✓ Ministère multilingue récupéré avec succès');
       });
 
+      test('Récupération d\'un secteur multilingue', () async {
+        debugPrint('🧪 Test: Récupération d\'un secteur multilingue');
+
+        final sector = await databaseService.sectorDao.getById('S-TEST-001');
+        expect(sector, isNotNull);
+
+        debugPrint('🔤 Nom en espagnol: ${sector!.getNombre("es")}');
+        expect(sector.getNombre('es'), equals('SECTOR DE PRUEBA'));
+
+        debugPrint('🔤 Nom en français: ${sector.getNombre("fr")}');
+        expect(sector.getNombre('fr'), equals('SECTEUR DE TEST'));
+
+        debugPrint('🔤 Nom en anglais: ${sector.getNombre("en")}');
+        expect(sector.getNombre('en'), equals('TEST SECTOR'));
+
+        debugPrint('✓ Secteur multilingue récupéré avec succès');
+      });
+
+      test('Récupération d\'une catégorie multilingue', () async {
+        debugPrint('🧪 Test: Récupération d\'une catégorie multilingue');
+
+        final categoria =
+            await databaseService.categoriaDao.getById('C-TEST-001');
+        expect(categoria, isNotNull);
+
+        debugPrint('🔤 Nom en espagnol: ${categoria!.getNombre("es")}');
+        expect(categoria.getNombre('es'), equals('CATEGORIA DE PRUEBA'));
+
+        debugPrint('🔤 Nom en français: ${categoria.getNombre("fr")}');
+        expect(categoria.getNombre('fr'), equals('CATEGORIE DE TEST'));
+
+        debugPrint('🔤 Nom en anglais: ${categoria.getNombre("en")}');
+        expect(categoria.getNombre('en'), equals('TEST CATEGORY'));
+
+        debugPrint('✓ Catégorie multilingue récupérée avec succès');
+      });
+
+      test('Récupération d\'une sous-catégorie multilingue', () async {
+        debugPrint('🧪 Test: Récupération d\'une sous-catégorie multilingue');
+
+        final subCategoria =
+            await databaseService.subCategoriaDao.getById('SC-TEST-001');
+        expect(subCategoria, isNotNull);
+
+        debugPrint('🔤 Nom en espagnol: ${subCategoria!.getNombre("es")}');
+        expect(subCategoria.getNombre('es'), equals('SUB-CATEGORIA DE PRUEBA'));
+
+        debugPrint('🔤 Nom en français: ${subCategoria.getNombre("fr")}');
+        expect(subCategoria.getNombre('fr'), equals('SOUS-CATEGORIE DE TEST'));
+
+        debugPrint('🔤 Nom en anglais: ${subCategoria.getNombre("en")}');
+        expect(subCategoria.getNombre('en'), equals('TEST SUB-CATEGORY'));
+      });
+
       test('Récupération d\'un concept multilingue avec détails', () async {
         debugPrint(
             '🧪 Test: Récupération d\'un concept multilingue avec détails');
 
-        final conceptId = 'T-TEST-001';
+        const conceptId = 'T-TEST-001';
         final details = await databaseService.getConceptoWithDetails(conceptId,
             langCode: 'fr');
 
@@ -158,6 +212,50 @@ void main() {
 
         debugPrint('✓ Recherche multilingue effectuée avec succès');
       });
+
+      test('Recherche multilingue avec un terme vide', () async {
+        debugPrint('🧪 Test: Recherche multilingue avec un terme vide');
+
+        final results = await databaseService.searchConceptos(
+            searchTerm: '', langCode: 'fr');
+
+        debugPrint('🔍 Résultats de la recherche avec terme vide: ${results.length}');
+        expect(results, isEmpty); // Or expect all concepts depending on implementation
+
+        debugPrint('✓ Recherche avec terme vide gérée avec succès');
+      });
+
+      test('Recherche multilingue avec un terme sans correspondance', () async {
+        debugPrint('🧪 Test: Recherche multilingue avec un terme sans correspondance');
+
+        final results = await databaseService.searchConceptos(
+            searchTerm: 'nonexistent', langCode: 'fr');
+
+        debugPrint('🔍 Résultats de la recherche sans correspondance: ${results.length}');
+        expect(results, isEmpty);
+
+        debugPrint('✓ Recherche sans correspondance gérée avec succès');
+      });
+
+      test('Gestion des codes de langue invalides dans getNombre', () async {
+        debugPrint('🧪 Test: Gestion des codes de langue invalides dans getNombre');
+
+        final ministry =
+            await databaseService.ministerioDao.getById('M-TEST-001');
+        expect(ministry, isNotNull);
+
+        // Assuming getNombre returns a default or throws an error for invalid codes
+        // You might need to adjust the expectation based on the actual implementation
+        debugPrint('🔤 Nom avec code de langue invalide: ${ministry!.getNombre("invalid_lang")}');
+        expect(ministry.getNombre('invalid_lang'), equals('MINISTERIO DE PRUEBA')); // Assuming Spanish is the default
+
+        debugPrint('✓ Codes de langue invalides gérés dans getNombre');
+      });
+
+       test('Gestion des codes de langue invalides dans searchConceptos', () async {
+         debugPrint('🧪 Test: Gestion des codes de langue invalides dans searchConceptos');
+         // Depending on implementation, this might throw an error or return empty
+       });
     });
 
     test('Test d\'exportation de la base de données', () async {

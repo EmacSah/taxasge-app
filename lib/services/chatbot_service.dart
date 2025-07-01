@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, ChangeNotifier, debugPrint;
 import '../models/chat_message.dart';
 import '../services/localization_service.dart';
 import '../ml/model_service.dart';
@@ -87,6 +87,27 @@ class ChatbotService extends ChangeNotifier {
         timestamp: DateTime.now(),
       ));
       notifyListeners();
+
+      // Vérifier si nous sommes sur le Web et si le service de modèle n'est pas pleinement fonctionnel
+      if (kIsWeb) {
+        debugPrint('ChatbotService: Running on web, ML functionalities are limited.');
+        final Map<String, String> webLimitedFunctionalityMessages = {
+          'es': 'Las funciones del chatbot son limitadas en la web. Utilice la aplicación móvil para todas las capacidades de IA.',
+          'fr': 'Les fonctionnalités du chatbot sont limitées sur le web. Veuillez utiliser l\'application mobile pour toutes les capacités d\'IA.',
+          'en': 'Chatbot features are limited on the web. Please use the mobile app for full AI capabilities.',
+        };
+        final String webMessage = _localizationService.getTranslation(webLimitedFunctionalityMessages);
+        final String finalWebMessage = webMessage.isNotEmpty ? webMessage : "Chatbot features are limited on the web. Please use the mobile app for full AI capabilities.";
+
+        _messages.add(ChatMessage(
+          text: finalWebMessage,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isProcessing = false;
+        notifyListeners();
+        return;
+      }
 
       // Traiter la requête
       final processedQuery = await _queryProcessor.processQuery(message);

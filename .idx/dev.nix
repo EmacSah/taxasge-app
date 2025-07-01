@@ -3,6 +3,25 @@
   packages = [
     pkgs.jdk17
     pkgs.unzip
+    pkgs.sqlite
+    pkgs.flutter # Add Flutter
+    pkgs.dart    # Add Dart
+    #pkgs.python311.withPackages (ps: [ # Add Python with packages
+     # ps.numpy
+     # ps.tensorflow-bin
+     # ps.keras
+     # ps.scikit-learn
+     # ps.pip
+    #])
+    pkgs.cmake     # Add CMake
+    pkgs.ninja     # Add Ninja
+    pkgs.clang     # Add Clang
+    pkgs.pkg-config # Add Pkg-config
+    pkgs.gtk3      # Add GTK3
+    pkgs.glib      # Add GLib
+    pkgs.libepoxy  # Add Libepoxy
+    pkgs.git       # Add Git
+    pkgs.curl      # Add Curl
   ];
   idx.extensions = [
     

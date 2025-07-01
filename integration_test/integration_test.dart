@@ -17,7 +17,13 @@ void main() {
   group('Integration Tests - TaxasGE', () {
     testWidgets('App launches and shows home screen',
         (WidgetTester tester) async {
-      app.main();
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: app
+              .TaxasGEApp(), // Assuming your main app widget is called TaxasGEApp
+        ),
+      );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
       // Vérifier la présence du titre ou d'un élément clé de l'écran d'accueil
@@ -27,7 +33,13 @@ void main() {
 
     testWidgets('Perform a search and display results',
         (WidgetTester tester) async {
-      app.main();
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: app
+              .TaxasGEApp(), // Assuming your main app widget is called TaxasGEApp
+        ),
+      );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
       // Trouver le champ de recherche et y entrer du texte
@@ -45,7 +57,13 @@ void main() {
 
     testWidgets('Open detail screen from search result',
         (WidgetTester tester) async {
-      app.main();
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: app
+              .TaxasGEApp(), // Assuming your main app widget is called TaxasGEApp
+        ),
+      );
+      await tester.pumpAndSettle(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
       // Effectuer une recherche

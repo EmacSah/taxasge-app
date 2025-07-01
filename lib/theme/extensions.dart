@@ -164,13 +164,13 @@ extension TranslationMapExtension on Map<String, String>? {
     }
 
     // Essayer la langue par défaut
-    final defaultLang = DatabaseSchema.defaultLanguage;
+    const defaultLang = DatabaseSchema.defaultLanguage;
     if (hasTranslation(defaultLang)) return this![defaultLang]!;
 
     // Prendre la première traduction disponible
     return this!
         .entries
-        .firstWhere((e) => e.value.isNotEmpty, orElse: () => MapEntry('', ''))
+        .firstWhere((e) => e.value.isNotEmpty, orElse: () => const MapEntry('', ''))
         .value;
   }
 

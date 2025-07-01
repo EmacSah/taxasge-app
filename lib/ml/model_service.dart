@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data'; // Added this import
 import 'package:flutter/services.dart' show rootBundle;
+// Conditional import for tflite_flutter can be tricky.
+// We will import it and guard its usage with kIsWeb.
 import 'package:tflite_flutter/tflite_flutter.dart';
 import '../services/localization_service.dart';
 import '../database/database_service.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 
 /// Service qui gère le modèle TensorFlow Lite du chatbot TaxasGE.
 ///
@@ -44,10 +47,15 @@ class ModelService {
   /// Vérifie si le service est initialisé
   bool get isInitialized => _isInitialized;
 
-
-
   /// Initialise le service en chargeant les modèles et tokenizers
   Future<void> initialize() async {
+    if (kIsWeb) {
+      debugPrint(
+          'ModelService: Running on web, FFI operations will be skipped.');
+      _isInitialized =
+          true; // Mark as initialized to prevent re-attempts if logic depends on it.
+      return;
+    }
     if (_isInitialized) {
       return;
     }
@@ -68,7 +76,8 @@ class ModelService {
 
       _isInitialized = true;
     } catch (e) {
-      debugPrint('Erreur lors de l\'initialisation du modèle: $e');
+      debugPrint(
+          'ModelService: Erreur lors de l\'initialisation du modèle: $e');
       rethrow;
     }
   }
@@ -159,7 +168,14 @@ class ModelService {
 
   /// Encode une question avec le modèle d'encodeur
   Future<List<double>> encodeQuestion(String question) async {
+    if (kIsWeb || !_isInitialized || _encoderInterpreter == null) {
+      debugPrint(
+          'ModelService: encodeQuestion called on web or service not initialized/interpreter missing. Returning empty list.');
+      return Future.value(<double>[]); // Return empty or default state
+    }
+    // Ensure initialization is complete (it might have been called separately)
     if (!_isInitialized) await initialize();
+    if (_encoderInterpreter == null) return Future.value(<double>[]);
 
     // Encoder le texte
     final input = encodeText(question, true);
@@ -177,7 +193,18 @@ class ModelService {
 
   /// Génère une réponse avec le modèle de décodeur
   Future<String> generateResponse(List<double> encoderState) async {
+    if (kIsWeb || !_isInitialized || _decoderInterpreter == null) {
+      debugPrint(
+          'ModelService: generateResponse called on web or service not initialized/interpreter missing. Returning default message.');
+      return Future.value(
+          "Les fonctionnalités d'IA ne sont pas disponibles sur le Web.");
+    }
+    // Ensure initialization is complete
     if (!_isInitialized) await initialize();
+    if (_decoderInterpreter == null) {
+      return Future.value(
+          "Les fonctionnalités d'IA ne sont pas disponibles sur le Web car le décodeur n'est pas initialisé.");
+    }
 
     // Initialiser la séquence de réponse avec un token de début
     List<int> outputSequence = [1]; // Token <START>
@@ -224,8 +251,10 @@ class ModelService {
 
   /// Ferme les ressources du modèle
   Future<void> dispose() async {
-    _encoderInterpreter?.close();
-    _decoderInterpreter?.close();
+    if (!kIsWeb) {
+      _encoderInterpreter?.close();
+      _decoderInterpreter?.close();
+    }
     _isInitialized = false;
   }
 }

@@ -287,7 +287,7 @@ class FavoriDao {
   /// à des concepts qui appartiennent à un ministère spécifique.
   Future<List<Favori>> getFavorisByMinisterioId(String ministerioId) async {
     try {
-      final query = '''
+      const query = '''
         SELECT f.* FROM $_tableName f
         JOIN ${DatabaseSchema.tableConceptos} c ON f.concepto_id = c.id
         JOIN ${DatabaseSchema.tableSubCategorias} sc ON c.sub_categoria_id = sc.id

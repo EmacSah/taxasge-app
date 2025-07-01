@@ -116,7 +116,7 @@ class CustomWidgetStyles {
                   ),
                 ),
               ),
-              SizedBox(width: AppTheme.paddingMedium),
+              const SizedBox(width: AppTheme.paddingMedium),
             ],
 
             // Contenu
@@ -414,7 +414,7 @@ class CustomWidgetStyles {
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.paddingMedium),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.backgroundWhite,
         border: Border(
           bottom: BorderSide(color: AppTheme.dividerColor),
@@ -628,7 +628,7 @@ class CustomWidgetStyles {
                       ),
                       child: Text(
                         langName,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppTheme.primaryColor,
                           fontSize: 12,
                         ),
