@@ -14,9 +14,17 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 /// Cette classe est responsable du chargement et de l'initialisation des modèles
 /// d'encodeur et de décodeur au format TFLite, ainsi que de la gestion des tokenizers.
 class ModelService {
-  // Singleton
-  static final ModelService _instance = ModelService._internal();
-  static ModelService get instance => _instance;
+  // Singleton implementation for testability
+  // The real singleton instance
+  static final ModelService _realInstance = ModelService._internal();
+
+  // A test-specific instance that can be set for testing
+  static ModelService? _testInstanceForTesting;
+
+  // The public getter for the instance
+  static ModelService get instance {
+    return _testInstanceForTesting ?? _realInstance;
+  }
 
   // Base de données
   // ignore: unused_field
@@ -43,6 +51,11 @@ class ModelService {
 
   // Constructeur privé
   ModelService._internal();
+
+  // Method to set a test instance (only for testing)
+  static setTestInstance(ModelService? instance) {
+    _testInstanceForTesting = instance;
+  }
 
   /// Vérifie si le service est initialisé
   bool get isInitialized => _isInitialized;
@@ -106,13 +119,11 @@ class ModelService {
   /// Charge les tokenizers depuis les fichiers JSON
   Future<void> _loadTokenizers() async {
     try {
-      final questionTokenizerStr = await rootBundle
-          .loadString('assets/ml/taxasge_model_question_tokenizer.json');
-      final answerTokenizerStr = await rootBundle
-          .loadString('assets/ml/taxasge_model_answer_tokenizer.json');
+      final questionTokenizerBytes = await rootBundle.load('/home/user/taxasge-app/assets/ml/taxasge_model_question_tokenizer.json');
+      final answerTokenizerBytes = await rootBundle.load('/home/user/taxasge-app/assets/ml/taxasge_model_answer_tokenizer.json');
 
-      _questionTokenizer = jsonDecode(questionTokenizerStr);
-      _answerTokenizer = jsonDecode(answerTokenizerStr);
+      _questionTokenizer = jsonDecode(utf8.decode(questionTokenizerBytes.buffer.asUint8List()));
+      _answerTokenizer = jsonDecode(utf8.decode(answerTokenizerBytes.buffer.asUint8List()));
     } catch (e) {
       debugPrint('Erreur lors du chargement des tokenizers: $e');
       rethrow;

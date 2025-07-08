@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:taxasge/main.dart' as app;
 import '../test/test_utils/test_config.dart';
+import 'package:taxasge/ml/model_service.dart';
+import '../test/mocks/mock_nlp_services.dart';
+
 
 void main() {
   // Initialise l'environnement d'intégration
@@ -12,6 +15,9 @@ void main() {
     // Mock des assets et initialisation de la base de données de test
     await TestConfig.initialize();
     await TestConfig.initializeDatabase(forceReset: true);
+
+    // Inject the mock ModelService
+    ModelService.setTestInstance(mockModelService); // Use the setter
   });
 
   group('Integration Tests - TaxasGE', () {
