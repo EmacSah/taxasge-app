@@ -335,7 +335,7 @@ class AppTheme {
     ),
 
     // Cartes
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: elevationSmall,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(borderRadiusCard),
@@ -421,7 +421,7 @@ class AppTheme {
     ),
 
     // Dialogues
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: backgroundWhite,
       elevation: elevationLarge,
       shape: RoundedRectangleBorder(
@@ -430,7 +430,7 @@ class AppTheme {
     ),
 
     // Tabs
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: TabBarThemeData(
       labelColor: primaryColor,
       unselectedLabelColor: textMedium,
       indicator: const BoxDecoration(

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taxasge/database/database_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 // Import this
 
@@ -18,6 +19,9 @@ class TestConfig {
   static Future<void> initialize() async {
     if (_isInitialized) return;
     TestWidgetsFlutterBinding.ensureInitialized();
+    
+    // Désactiver Google Fonts runtime fetching
+    GoogleFonts.config.allowRuntimeFetching = false;
 
     // Configuration sqflite pour desktop (Windows, Linux, macOS)
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -47,9 +51,13 @@ class TestConfig {
 
       // Mock tokenizer JSON files (intercepting both 'load' and 'loadString')
       if ((call.method == 'load' || call.method == 'loadString') && (assetPath == 'assets/ml/taxasge_model_question_tokenizer.json' || assetPath == 'assets/ml/taxasge_model_answer_tokenizer.json')) {
-           // Create Uint8List directly from UTF-8 encoded string
-           final byteData = Uint8List.fromList(utf8.encode(mockTokenizerJsonString)).buffer.asByteData();
-           return byteData; // Return ByteData directly
+ if (call.method == 'loadString') {
+ return mockTokenizerJsonString; // Return String directly for loadString
+ } else if (call.method == 'load') {
+ // Create Uint8List directly from UTF-8 encoded string for load
+ final byteData = Uint8List.fromList(utf8.encode(mockTokenizerJsonString)).buffer.asByteData();
+ return byteData; // Return ByteData for load
+ }
       }
 
       // If the app requests the main taxes.json for seeding the database, serve the test version.

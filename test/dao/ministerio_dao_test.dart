@@ -10,6 +10,7 @@ import 'package:taxasge/services/localization_service.dart';
 import '../database_test_utils.dart'; // sqfliteTestInit() + getTestDatabaseService()
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   // Initialisation sqflite_common_ffi pour les tests desktop / CI
   sqfliteTestInit();
 

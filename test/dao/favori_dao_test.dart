@@ -8,6 +8,7 @@ import 'package:taxasge/database/database_service.dart';
 import '../database_test_utils.dart';   // sqfliteTestInit() + getTestDatabaseService()
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteTestInit();
 
   group('FavoriDao – tests combinés', () {

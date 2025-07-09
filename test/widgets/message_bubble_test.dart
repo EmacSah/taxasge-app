@@ -4,6 +4,7 @@ import 'package:taxasge/models/chat_message.dart';
 import 'package:taxasge/widgets/chat/message_bubble.dart';
 import 'package:taxasge/theme/app_theme.dart'; // Pour AppTheme
 import 'package:intl/intl.dart'; // Pour DateFormat
+import 'package:intl/date_symbol_data_local.dart'; 
 
 // Un widget wrapper pour fournir MaterialApp et le thème
 Widget makeTestableWidget({required Widget child, required String currentLang}) {
@@ -15,6 +16,12 @@ Widget makeTestableWidget({required Widget child, required String currentLang}) 
 }
 
 void main() {
+
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    await initializeDateFormatting(); // Initialise toutes les locales
+  });
+
   group('MessageBubble Tests', () {
     final chatMessageUser = ChatMessage(
       text: 'Hello User',

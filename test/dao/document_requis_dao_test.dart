@@ -8,6 +8,7 @@ import 'package:taxasge/services/localization_service.dart';
 import '../database_test_utils.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteTestInit();
 
   group('DocumentRequisDao – tests combinés', () {

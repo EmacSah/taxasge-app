@@ -53,7 +53,7 @@ class ModelService {
   ModelService._internal();
 
   // Method to set a test instance (only for testing)
-  static setTestInstance(ModelService? instance) {
+  static void setTestInstance(ModelService? instance) {
     _testInstanceForTesting = instance;
   }
 
@@ -119,8 +119,8 @@ class ModelService {
   /// Charge les tokenizers depuis les fichiers JSON
   Future<void> _loadTokenizers() async {
     try {
-      final questionTokenizerBytes = await rootBundle.load('/home/user/taxasge-app/assets/ml/taxasge_model_question_tokenizer.json');
-      final answerTokenizerBytes = await rootBundle.load('/home/user/taxasge-app/assets/ml/taxasge_model_answer_tokenizer.json');
+      final questionTokenizerBytes = await rootBundle.load('assets/ml/taxasge_model_question_tokenizer.json');
+      final answerTokenizerBytes = await rootBundle.load('assets/ml/taxasge_model_answer_tokenizer.json');
 
       _questionTokenizer = jsonDecode(utf8.decode(questionTokenizerBytes.buffer.asUint8List()));
       _answerTokenizer = jsonDecode(utf8.decode(answerTokenizerBytes.buffer.asUint8List()));
